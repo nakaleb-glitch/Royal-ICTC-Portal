@@ -67,8 +67,13 @@ export default function Users() {
           email: row['Email'] || row['email'],
         }))
 
+        const { data: { session } } = await supabase.auth.getSession()
+
         const { data, error } = await supabase.functions.invoke('create-teachers', {
-          body: { teachers }
+          body: { teachers },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`
+          }
         })
 
         if (error) {
@@ -139,7 +144,7 @@ export default function Users() {
         {loading ? (
           <div className="p-8 text-center text-gray-400">Loading...</div>
         ) : users.length === 0 ? (
-          <div className="p-8 text-center text.gray-400">No users yet.</div>
+          <div className="p-8 text-center text-gray-400">No users yet.</div>
         ) : (
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
