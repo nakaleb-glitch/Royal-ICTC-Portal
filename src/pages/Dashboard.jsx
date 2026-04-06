@@ -23,7 +23,16 @@ export default function Dashboard() {
     setLoading(false)
   }
 
-  const programmeLabel = (p) => p === 'primary' ? 'Primary' : 'Lower Secondary'
+  const levelLabel = (l) => ({
+    primary: 'Primary',
+    lower_secondary: 'Lower Secondary',
+    upper_secondary: 'Upper Secondary',
+    high_school: 'High School',
+  }[l] || l)
+
+  const programmeBadgeStyle = (p) => p === 'bilingual'
+    ? 'bg-purple-100 text-purple-700'
+    : 'bg-teal-100 text-teal-700'
 
   return (
     <Layout>
@@ -76,9 +85,12 @@ export default function Dashboard() {
             >
               <div className="font-semibold text-gray-900 mb-1">{cls.name}</div>
               <div className="text-sm text-gray-500">{cls.subject}</div>
-              <div className="mt-3">
+              <div className="mt-3 flex gap-2">
                 <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
-                  {programmeLabel(cls.programme)}
+                  {levelLabel(cls.level)}
+                </span>
+                <span className={`text-xs px-2 py-1 rounded-full ${programmeBadgeStyle(cls.programme)}`}>
+                  {cls.programme}
                 </span>
               </div>
             </Link>
