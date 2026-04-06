@@ -5,6 +5,7 @@ import AuthCallback from './pages/AuthCallback'
 import Dashboard from './pages/Dashboard'
 import Students from './pages/admin/Students'
 import Classes from './pages/admin/Classes'
+import ClassDetail from './pages/ClassDetail'
 
 const ProtectedRoute = ({ children, adminOnly = false }) => {
   const { user, profile, loading } = useAuth()
@@ -20,6 +21,7 @@ function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/class/:classId" element={<ProtectedRoute><ClassDetail /></ProtectedRoute>} />
       <Route path="/admin/students" element={<ProtectedRoute adminOnly><Students /></ProtectedRoute>} />
       <Route path="/admin/classes" element={<ProtectedRoute adminOnly><Classes /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/login" />} />

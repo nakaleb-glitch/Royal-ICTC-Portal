@@ -1,9 +1,29 @@
 import { useAuth } from '../contexts/AuthContext'
 import { Link } from 'react-router-dom'
 import Layout from '../components/Layout'
+import { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
 
 export default function Dashboard() {
   const { profile, user } = useAuth()
+  const [classes, setClasses] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (profile) fetchClasses()
+  }, [profile])
+
+  const fetchClasses = async () => {
+    let query = supabase.from('classes').select('*').order('name')
+    if (profile.role !== 'admin') {
+      query = query.eq('teacher_id', profile.id)
+    }
+    const { data } = await query
+    setClasses(data || [])
+    setLoading(false)
+  }
+
+  const programmeLabel = (p) => p === 'primary' ? 'Primary' : 'Lower Secondary'
 
   return (
     <Layout>
@@ -34,11 +54,37 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-400">
-        {profile?.role === 'admin' 
-          ? 'Select a section above to get started.'
-          : 'No classes assigned yet. Contact your administrator.'}
-      </div>
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        {profile?.role === 'admin' ? 'All Classes' : 'My Classes'}
+      </h3>
+
+      {loading ? (
+        <div className="text-center text-gray-400 py-10">Loading...</div>
+      ) : classes.length === 0 ? (
+        <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-400">
+          {profile?.role === 'admin'
+            ? 'No classes yet. Create one in the Classes section.'
+            : 'No classes assigned yet. Contact your administrator.'}
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-4">
+          {classes.map(cls => (
+            <Link
+              key={cls.id}
+              to={`/class/${cls.id}`}
+              className="bg-white rounded-xl border border-gray-200 p-6 hover:border-blue-300 hover:shadow-sm transition-all"
+            >
+              <div className="font-semibold text-gray-900 mb-1">{cls.name}</div>
+              <div className="text-sm text-gray-500">{cls.subject}</div>
+              <div className="mt-3">
+                <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
+                  {programmeLabel(cls.programme)}
+                </span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
     </Layout>
   )
 }

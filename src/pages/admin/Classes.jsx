@@ -3,8 +3,8 @@ import { supabase } from '../../lib/supabase'
 import Layout from '../../components/Layout'
 
 const SUBJECTS = {
-  primary: ['ESL', 'Maths', 'Science', 'Global Perspectives'],
-  lower_secondary: ['ESL', 'Maths', 'Science', 'Global Perspectives'],
+  primary: ['ESL', 'Mathematics', 'Science', 'Global Perspectives'],
+  lower_secondary: ['ESL', 'Mathematics', 'Science', 'Global Perspectives'],
 }
 
 export default function Classes() {
