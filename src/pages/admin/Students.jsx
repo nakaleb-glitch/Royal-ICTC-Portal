@@ -37,6 +37,7 @@ export default function Students() {
           name_vn: row['Name (VN)'] || row['name_vn'],
           name_eng: row['Name (ENG)'] || row['name_eng'],
           class: row['Class'] || row['class'],
+          level: row['Level'] || row['level'],
           programme: row['Programme'] || row['programme'],
         }))
 
@@ -55,6 +56,17 @@ export default function Students() {
       }
     })
   }
+
+  const levelLabel = (l) => ({
+    primary: 'Primary',
+    lower_secondary: 'Lower Secondary',
+    upper_secondary: 'Upper Secondary',
+    high_school: 'High School',
+  }[l] || l)
+
+  const programmeBadgeStyle = (p) => p === 'bilingual'
+    ? 'bg-purple-100 text-purple-700'
+    : 'bg-teal-100 text-teal-700'
 
   const filtered = students.filter(s =>
     s.name_eng?.toLowerCase().includes(search.toLowerCase()) ||
@@ -80,8 +92,8 @@ export default function Students() {
 
       {message && (
         <div className={`mb-6 px-4 py-3 rounded-lg text-sm font-medium ${
-          message.type === 'success' 
-            ? 'bg-green-50 text-green-700 border border-green-200' 
+          message.type === 'success'
+            ? 'bg-green-50 text-green-700 border border-green-200'
             : 'bg-red-50 text-red-700 border border-red-200'
         }`}>
           {message.text}
@@ -104,8 +116,8 @@ export default function Students() {
           <div className="p-8 text-center text-gray-400">Loading...</div>
         ) : filtered.length === 0 ? (
           <div className="p-8 text-center text-gray-400">
-            {students.length === 0 
-              ? 'No students yet. Import a CSV to get started.' 
+            {students.length === 0
+              ? 'No students yet. Import a CSV to get started.'
               : 'No students match your search.'}
           </div>
         ) : (
@@ -116,6 +128,7 @@ export default function Students() {
                 <th className="text-left px-6 py-3 text-gray-500 font-medium">English Name</th>
                 <th className="text-left px-6 py-3 text-gray-500 font-medium">Vietnamese Name</th>
                 <th className="text-left px-6 py-3 text-gray-500 font-medium">Class</th>
+                <th className="text-left px-6 py-3 text-gray-500 font-medium">Level</th>
                 <th className="text-left px-6 py-3 text-gray-500 font-medium">Programme</th>
               </tr>
             </thead>
@@ -127,7 +140,12 @@ export default function Students() {
                   <td className="px-6 py-3 text-gray-600">{student.name_vn}</td>
                   <td className="px-6 py-3 text-gray-600">{student.class}</td>
                   <td className="px-6 py-3">
-                    <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
+                    <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
+                      {levelLabel(student.level)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-3">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${programmeBadgeStyle(student.programme)}`}>
                       {student.programme}
                     </span>
                   </td>
@@ -140,7 +158,9 @@ export default function Students() {
 
       <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
         <p className="text-xs text-gray-500 font-medium mb-2">CSV Format — your file should have these column headers:</p>
-        <code className="text-xs text-gray-600">Student ID, Name (VN), Name (ENG), Class, Programme</code>
+        <code className="text-xs text-gray-600">Student ID, Name (VN), Name (ENG), Class, Level, Programme</code>
+        <p className="text-xs text-gray-400 mt-2">Level: primary · lower_secondary · upper_secondary · high_school</p>
+        <p className="text-xs text-gray-400">Programme: bilingual · integrated</p>
       </div>
     </Layout>
   )

@@ -5,6 +5,8 @@ import Layout from '../../components/Layout'
 const SUBJECTS = {
   primary: ['ESL', 'Mathematics', 'Science', 'Global Perspectives'],
   lower_secondary: ['ESL', 'Mathematics', 'Science', 'Global Perspectives'],
+  upper_secondary: ['ESL', 'Mathematics', 'Science', 'Global Perspectives'],
+  high_school: ['ESL', 'Mathematics', 'Science', 'Global Perspectives'],
 }
 
 export default function Classes() {
@@ -13,7 +15,7 @@ export default function Classes() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({
-    name: '', subject: '', programme: 'primary', teacher_id: ''
+    name: '', subject: '', level: 'primary', programme: 'bilingual', teacher_id: ''
   })
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState(null)
@@ -42,27 +44,84 @@ export default function Classes() {
   }
 
   const handleSubmit = async () => {
-    if (!form.name || !form.subject || !form.programme) return
-    setSaving(true)
-    const { error } = await supabase.from('classes').insert({
+  if (!form.name || !form.subject || !form.level || !form.programme) return
+  setSaving(true)
+
+  // Step 1: Create the class
+  const { data: newClass, error: classError } = await supabase
+    .from('classes')
+    .insert({
       name: form.name,
       subject: form.subject,
+      level: form.level,
       programme: form.programme,
       teacher_id: form.teacher_id || null,
       academic_year: '2026-27'
     })
-    if (error) {
-      setMessage({ type: 'error', text: error.message })
-    } else {
-      setMessage({ type: 'success', text: 'Class created successfully.' })
-      setForm({ name: '', subject: '', programme: 'primary', teacher_id: '' })
-      setShowForm(false)
-      fetchClasses()
-    }
+    .select()
+    .single()
+
+  if (classError) {
+    setMessage({ type: 'error', text: classError.message })
     setSaving(false)
+    return
   }
 
-  const programmLabel = (p) => p === 'primary' ? 'Primary' : 'Lower Secondary'
+  // Step 2: Extract homeroom code from class name (e.g. "2B2 ESL" → "2B2")
+  const homeroom = form.name.split(' ')[0]
+
+  // Step 3: Find all students in that homeroom
+  const { data: matchedStudents, error: studentError } = await supabase
+    .from('students')
+    .select('id')
+    .eq('class', homeroom)
+
+  if (studentError) {
+    setMessage({ type: 'error', text: 'Class created but could not find students: ' + studentError.message })
+    setSaving(false)
+    return
+  }
+
+  // Step 4: Enrol them all into the class
+  if (matchedStudents.length > 0) {
+    const enrolments = matchedStudents.map(s => ({
+      class_id: newClass.id,
+      student_id: s.id
+    }))
+
+    const { error: enrolError } = await supabase
+      .from('class_students')
+      .insert(enrolments)
+
+    if (enrolError) {
+      setMessage({ type: 'error', text: 'Class created but enrolment failed: ' + enrolError.message })
+      setSaving(false)
+      return
+    }
+
+    setMessage({ type: 'success', text: `Class created and ${matchedStudents.length} students enrolled automatically.` })
+  } else {
+    setMessage({ type: 'success', text: 'Class created. No students found for homeroom ' + homeroom + '.' })
+  }
+
+  setForm({ name: '', subject: '', level: 'primary', programme: 'bilingual', teacher_id: '' })
+  setShowForm(false)
+  fetchClasses()
+  setSaving(false)
+}
+
+  const levelLabel = (l) => ({
+    primary: 'Primary',
+    lower_secondary: 'Lower Secondary',
+    upper_secondary: 'Upper Secondary',
+    high_school: 'High School',
+  }[l] || l)
+
+  const programmeLabel = (p) => p === 'bilingual' ? 'Bilingual' : 'Integrated'
+
+  const programmeBadgeStyle = (p) => p === 'bilingual'
+    ? 'bg-purple-100 text-purple-700'
+    : 'bg-teal-100 text-teal-700'
 
   return (
     <Layout>
@@ -105,14 +164,27 @@ export default function Classes() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-500 block mb-1">Programme</label>
+              <label className="text-xs font-medium text-gray-500 block mb-1">Level</label>
               <select
-                value={form.programme}
-                onChange={e => setForm({ ...form, programme: e.target.value, subject: '' })}
+                value={form.level}
+                onChange={e => setForm({ ...form, level: e.target.value, subject: '' })}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="primary">Primary</option>
                 <option value="lower_secondary">Lower Secondary</option>
+                <option value="upper_secondary">Upper Secondary</option>
+                <option value="high_school">High School</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-500 block mb-1">Programme</label>
+              <select
+                value={form.programme}
+                onChange={e => setForm({ ...form, programme: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="bilingual">Bilingual</option>
+                <option value="integrated">Integrated</option>
               </select>
             </div>
             <div>
@@ -123,7 +195,7 @@ export default function Classes() {
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Select subject</option>
-                {SUBJECTS[form.programme].map(s => (
+                {SUBJECTS[form.level].map(s => (
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
@@ -162,6 +234,7 @@ export default function Classes() {
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="text-left px-6 py-3 text-gray-500 font-medium">Class Name</th>
+                <th className="text-left px-6 py-3 text-gray-500 font-medium">Level</th>
                 <th className="text-left px-6 py-3 text-gray-500 font-medium">Programme</th>
                 <th className="text-left px-6 py-3 text-gray-500 font-medium">Subject</th>
                 <th className="text-left px-6 py-3 text-gray-500 font-medium">Teacher</th>
@@ -173,7 +246,12 @@ export default function Classes() {
                   <td className="px-6 py-3 font-medium text-gray-900">{cls.name}</td>
                   <td className="px-6 py-3">
                     <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
-                      {programmLabel(cls.programme)}
+                      {levelLabel(cls.level)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-3">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${programmeBadgeStyle(cls.programme)}`}>
+                      {programmeLabel(cls.programme)}
                     </span>
                   </td>
                   <td className="px-6 py-3 text-gray-600">{cls.subject}</td>
