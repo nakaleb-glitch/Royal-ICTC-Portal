@@ -14,10 +14,24 @@ serve(async (req) => {
   try {
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
     )
 
-    const { teachers } = await req.json()
+    const body = await req.json()
+    const teachers = body.teachers
+
+    if (!teachers || !Array.isArray(teachers)) {
+      return new Response(
+        JSON.stringify({ error: 'No teachers array provided' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
     const results = []
     const errors = []
@@ -36,12 +50,21 @@ serve(async (req) => {
       if (error) {
         errors.push({ email: teacher.email, error: error.message })
       } else {
-        await supabaseAdmin.from('users').update({
-          full_name: teacher.full_name,
-          role: 'teacher'
-        }).eq('id', data.user.id)
+        // Use upsert instead of update so it creates the row if it doesn't exist
+        const { error: upsertError } = await supabaseAdmin
+          .from('users')
+          .upsert({
+            id: data.user.id,
+            email: teacher.email,
+            full_name: teacher.full_name,
+            role: 'teacher'
+          }, { onConflict: 'id' })
 
-        results.push({ email: teacher.email, success: true })
+        if (upsertError) {
+          errors.push({ email: teacher.email, error: 'Auth created but profile failed: ' + upsertError.message })
+        } else {
+          results.push({ email: teacher.email, success: true })
+        }
       }
     }
 

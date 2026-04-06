@@ -19,6 +19,9 @@ export default function Classes() {
   })
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState(null)
+  const [editingId, setEditingId] = useState(null)
+  const [editForm, setEditForm] = useState({})
+  const [confirmDelete, setConfirmDelete] = useState(null)
 
   useEffect(() => {
     fetchClasses()
@@ -44,71 +47,114 @@ export default function Classes() {
   }
 
   const handleSubmit = async () => {
-  if (!form.name || !form.subject || !form.level || !form.programme) return
-  setSaving(true)
+    if (!form.name || !form.subject || !form.level || !form.programme) return
+    setSaving(true)
 
-  // Step 1: Create the class
-  const { data: newClass, error: classError } = await supabase
-    .from('classes')
-    .insert({
-      name: form.name,
-      subject: form.subject,
-      level: form.level,
-      programme: form.programme,
-      teacher_id: form.teacher_id || null,
-      academic_year: '2026-27'
-    })
-    .select()
-    .single()
+    const { data: newClass, error: classError } = await supabase
+      .from('classes')
+      .insert({
+        name: form.name,
+        subject: form.subject,
+        level: form.level,
+        programme: form.programme,
+        teacher_id: form.teacher_id || null,
+        academic_year: '2026-27'
+      })
+      .select()
+      .single()
 
-  if (classError) {
-    setMessage({ type: 'error', text: classError.message })
-    setSaving(false)
-    return
-  }
-
-  // Step 2: Extract homeroom code from class name (e.g. "2B2 ESL" → "2B2")
-  const homeroom = form.name.split(' ')[0]
-
-  // Step 3: Find all students in that homeroom
-  const { data: matchedStudents, error: studentError } = await supabase
-    .from('students')
-    .select('id')
-    .eq('class', homeroom)
-
-  if (studentError) {
-    setMessage({ type: 'error', text: 'Class created but could not find students: ' + studentError.message })
-    setSaving(false)
-    return
-  }
-
-  // Step 4: Enrol them all into the class
-  if (matchedStudents.length > 0) {
-    const enrolments = matchedStudents.map(s => ({
-      class_id: newClass.id,
-      student_id: s.id
-    }))
-
-    const { error: enrolError } = await supabase
-      .from('class_students')
-      .insert(enrolments)
-
-    if (enrolError) {
-      setMessage({ type: 'error', text: 'Class created but enrolment failed: ' + enrolError.message })
+    if (classError) {
+      setMessage({ type: 'error', text: classError.message })
       setSaving(false)
       return
     }
 
-    setMessage({ type: 'success', text: `Class created and ${matchedStudents.length} students enrolled automatically.` })
-  } else {
-    setMessage({ type: 'success', text: 'Class created. No students found for homeroom ' + homeroom + '.' })
+    const homeroom = form.name.split(' ')[0]
+
+    const { data: matchedStudents, error: studentError } = await supabase
+      .from('students')
+      .select('id')
+      .eq('class', homeroom)
+
+    if (studentError) {
+      setMessage({ type: 'error', text: 'Class created but could not find students: ' + studentError.message })
+      setSaving(false)
+      return
+    }
+
+    if (matchedStudents.length > 0) {
+      const enrolments = matchedStudents.map(s => ({
+        class_id: newClass.id,
+        student_id: s.id
+      }))
+
+      const { error: enrolError } = await supabase
+        .from('class_students')
+        .insert(enrolments)
+
+      if (enrolError) {
+        setMessage({ type: 'error', text: 'Class created but enrolment failed: ' + enrolError.message })
+        setSaving(false)
+        return
+      }
+
+      setMessage({ type: 'success', text: `Class created and ${matchedStudents.length} students enrolled automatically.` })
+    } else {
+      setMessage({ type: 'success', text: 'Class created. No students found for homeroom ' + homeroom + '.' })
+    }
+
+    setForm({ name: '', subject: '', level: 'primary', programme: 'bilingual', teacher_id: '' })
+    setShowForm(false)
+    fetchClasses()
+    setSaving(false)
   }
 
-  setForm({ name: '', subject: '', level: 'primary', programme: 'bilingual', teacher_id: '' })
-  setShowForm(false)
-  fetchClasses()
-  setSaving(false)
-}
+  const startEdit = (cls) => {
+    setEditingId(cls.id)
+    setEditForm({
+      name: cls.name,
+      subject: cls.subject,
+      level: cls.level,
+      programme: cls.programme,
+      teacher_id: cls.teacher_id || ''
+    })
+  }
+
+  const saveEdit = async (classId) => {
+    const { error } = await supabase
+      .from('classes')
+      .update({
+        name: editForm.name,
+        subject: editForm.subject,
+        level: editForm.level,
+        programme: editForm.programme,
+        teacher_id: editForm.teacher_id || null
+      })
+      .eq('id', classId)
+
+    if (error) {
+      setMessage({ type: 'error', text: error.message })
+    } else {
+      setMessage({ type: 'success', text: 'Class updated successfully.' })
+      setEditingId(null)
+      fetchClasses()
+    }
+  }
+
+  const deleteClass = async (classId) => {
+    const { error } = await supabase
+      .from('classes')
+      .delete()
+      .eq('id', classId)
+
+    if (error) {
+      setMessage({ type: 'error', text: error.message })
+    } else {
+      setMessage({ type: 'success', text: 'Class deleted.' })
+      setConfirmDelete(null)
+      fetchClasses()
+    }
+  }
 
   const levelLabel = (l) => ({
     primary: 'Primary',
@@ -149,6 +195,24 @@ export default function Classes() {
         </div>
       )}
 
+      {confirmDelete && (
+        <div className="mb-6 px-4 py-4 rounded-lg bg-red-50 border border-red-200">
+          <p className="text-sm font-medium text-red-700 mb-3">
+            Are you sure you want to delete <strong>{confirmDelete.name}</strong>? This cannot be undone.
+          </p>
+          <div className="flex gap-2">
+            <button onClick={() => deleteClass(confirmDelete.id)}
+              className="px-4 py-1.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">
+              Yes, delete class
+            </button>
+            <button onClick={() => setConfirmDelete(null)}
+              className="px-4 py-1.5 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-gray-50">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {showForm && (
         <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
           <h3 className="font-semibold text-gray-900 mb-4">Create New Class</h3>
@@ -157,7 +221,7 @@ export default function Classes() {
               <label className="text-xs font-medium text-gray-500 block mb-1">Class Name</label>
               <input
                 type="text"
-                placeholder="e.g. Primary 5A ESL"
+                placeholder="e.g. 2B2 ESL"
                 value={form.name}
                 onChange={e => setForm({ ...form, name: e.target.value })}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -238,25 +302,97 @@ export default function Classes() {
                 <th className="text-left px-6 py-3 text-gray-500 font-medium">Programme</th>
                 <th className="text-left px-6 py-3 text-gray-500 font-medium">Subject</th>
                 <th className="text-left px-6 py-3 text-gray-500 font-medium">Teacher</th>
+                <th className="text-left px-6 py-3 text-gray-500 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {classes.map(cls => (
                 <tr key={cls.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-3 font-medium text-gray-900">{cls.name}</td>
-                  <td className="px-6 py-3">
-                    <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
-                      {levelLabel(cls.level)}
-                    </span>
+                  <td className="px-6 py-3 font-medium text-gray-900">
+                    {editingId === cls.id ? (
+                      <input
+                        type="text"
+                        value={editForm.name}
+                        onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                        className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-36"
+                      />
+                    ) : cls.name}
                   </td>
                   <td className="px-6 py-3">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${programmeBadgeStyle(cls.programme)}`}>
-                      {programmeLabel(cls.programme)}
-                    </span>
+                    {editingId === cls.id ? (
+                      <select
+                        value={editForm.level}
+                        onChange={e => setEditForm({ ...editForm, level: e.target.value })}
+                        className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="primary">Primary</option>
+                        <option value="lower_secondary">Lower Secondary</option>
+                        <option value="upper_secondary">Upper Secondary</option>
+                        <option value="high_school">High School</option>
+                      </select>
+                    ) : (
+                      <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
+                        {levelLabel(cls.level)}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-6 py-3">
+                    {editingId === cls.id ? (
+                      <select
+                        value={editForm.programme}
+                        onChange={e => setEditForm({ ...editForm, programme: e.target.value })}
+                        className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="bilingual">Bilingual</option>
+                        <option value="integrated">Integrated</option>
+                      </select>
+                    ) : (
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${programmeBadgeStyle(cls.programme)}`}>
+                        {programmeLabel(cls.programme)}
+                      </span>
+                    )}
                   </td>
                   <td className="px-6 py-3 text-gray-600">{cls.subject}</td>
                   <td className="px-6 py-3 text-gray-600">
-                    {cls.users?.full_name || cls.users?.email || <span className="text-gray-400 italic">Unassigned</span>}
+                    {editingId === cls.id ? (
+                      <select
+                        value={editForm.teacher_id}
+                        onChange={e => setEditForm({ ...editForm, teacher_id: e.target.value })}
+                        className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Unassigned</option>
+                        {teachers.map(t => (
+                          <option key={t.id} value={t.id}>{t.full_name || t.email}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      cls.users?.full_name || cls.users?.email || <span className="text-gray-400 italic">Unassigned</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-3">
+                    {editingId === cls.id ? (
+                      <div className="flex gap-2">
+                        <button onClick={() => saveEdit(cls.id)}
+                          className="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700">
+                          Save
+                        </button>
+                        <button onClick={() => setEditingId(null)}
+                          className="px-3 py-1 border border-gray-300 text-gray-600 rounded-lg text-xs hover:bg-gray-50">
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <button onClick={() => startEdit(cls)}
+                          className="px-3 py-1 border border-gray-300 text-gray-600 rounded-lg text-xs hover:bg-gray-50">
+                          Edit
+                        </button>
+                        <button onClick={() => setConfirmDelete(cls)}
+                          className="px-3 py-1 border border-red-200 text-red-500 rounded-lg text-xs hover:bg-red-50">
+                          Delete
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
