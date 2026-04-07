@@ -50,11 +50,23 @@ export default function Classes() {
     setTeachers(data || [])
   }
 
-  const filteredTeachers = (level, subject) =>
-    teachers.filter(t =>
-      (!level || t.level === level) &&
-      (!subject || t.subject === subject)
-    )
+  // Keep teacher dropdown behavior consistent: only show teachers when BOTH
+  // level + subject are chosen (same intent as the create flow).
+  //
+  // Also tolerate subject naming differences between `classes.subject`
+  // and `users.subject` (e.g. some teacher profiles use "ESL/GP").
+  const acceptableTeacherSubjects = (classSubject) => {
+    if (classSubject === 'ESL' || classSubject === 'Global Perspectives') {
+      return ['ESL/GP', 'ESL', 'Global Perspectives']
+    }
+    return [classSubject]
+  }
+
+  const filteredTeachers = (level, subject) => {
+    if (!level || !subject) return []
+    const subjects = new Set(acceptableTeacherSubjects(subject))
+    return teachers.filter(t => t.level === level && subjects.has(t.subject))
+  }
 
   const handleSubmit = async () => {
     if (!form.name || !form.subject || !form.level || !form.programme) return
@@ -258,9 +270,12 @@ export default function Classes() {
               <select
                 value={form.teacher_id}
                 onChange={e => setForm({ ...form, teacher_id: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={!form.level || !form.subject}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-400"
               >
-                <option value="">Unassigned</option>
+                <option value="">
+                  {!form.level || !form.subject ? 'Select level + subject first' : 'Unassigned'}
+                </option>
                 {filteredTeachers(form.level, form.subject).map(t => (
                   <option key={t.id} value={t.id}>{t.full_name || t.email}</option>
                 ))}
@@ -358,9 +373,12 @@ export default function Classes() {
                       <select
                         value={editForm.teacher_id}
                         onChange={e => setEditForm({ ...editForm, teacher_id: e.target.value })}
-                        className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        disabled={!editForm.level || !editForm.subject}
+                        className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-400"
                       >
-                        <option value="">Unassigned</option>
+                        <option value="">
+                          {!editForm.level || !editForm.subject ? 'Select level + subject first' : 'Unassigned'}
+                        </option>
                         {filteredTeachers(editForm.level, editForm.subject).map(t => (
                           <option key={t.id} value={t.id}>{t.full_name || t.email}</option>
                         ))}
