@@ -221,7 +221,7 @@ export default function Dashboard() {
                 style={{ borderTopColor: CARD_ACCENT.students, borderTopWidth: 3 }}
               >
                 <div className="font-semibold text-gray-900">Student Management</div>
-                <div className="text-sm text-gray-500 mt-1">Add, edit or remove students.</div>
+                <div className="text-sm text-gray-500 mt-1">Add, edit or remove student accounts.</div>
               </Link>
               <Link
                 to="/admin/classes"
@@ -236,8 +236,8 @@ export default function Dashboard() {
                 className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block"
                 style={{ borderTopColor: CARD_ACCENT.users, borderTopWidth: 3 }}
               >
-                <div className="font-semibold text-gray-900">User Management</div>
-                <div className="text-sm text-gray-500 mt-1">Add, edit or remove accounts.</div>
+                <div className="font-semibold text-gray-900">Teacher Management</div>
+                <div className="text-sm text-gray-500 mt-1">View, add, edit or remove teacher accounts.</div>
               </Link>
               <Link
                 to="/admin/resources"
@@ -294,8 +294,8 @@ export default function Dashboard() {
                   color="#1f86c7"
                   totals={classTotals}
                   metricColors={{
-                    total: '#1f86c7',
-                    bilingual: '#d1232a',
+                    total: '#d1232a',
+                    bilingual: '#1f86c7',
                     integrated: '#ffc612',
                   }}
                 />

@@ -112,9 +112,14 @@ export default function Resources() {
           <h2 className="text-2xl font-bold text-gray-900">Resource Management</h2>
           <p className="text-gray-500 text-sm mt-1">Add, edit or remove teacher resources.</p>
         </div>
-        <button onClick={() => setShowAddForm(!showAddForm)}
-          className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
-          {showAddForm ? 'Cancel' : '+ Add Resource'}
+        <button
+          onClick={() => setShowAddForm(!showAddForm)}
+          className="w-44 px-4 py-2 text-white rounded-lg text-sm font-medium text-center"
+          style={{ backgroundColor: '#1f86c7' }}
+          onMouseOver={e => e.currentTarget.style.backgroundColor = '#166a9b'}
+          onMouseOut={e => e.currentTarget.style.backgroundColor = '#1f86c7'}
+        >
+          {showAddForm ? 'Cancel' : 'New Resource'}
         </button>
       </div>
 

@@ -327,37 +327,38 @@ export default function Users() {
       {/* Header */}
       <div className="mb-8 flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
-          <p className="text-gray-500 text-sm mt-1">View, add, edit or remove users.</p>
+          <h2 className="text-2xl font-bold text-gray-900">Teacher Management</h2>
+          <p className="text-gray-500 text-sm mt-1">View, add, edit or remove teacher accounts.</p>
         </div>
         <div className="flex items-start gap-3">
           {!editing ? (
             <>
               <button
                 onClick={() => startEditing(users)}
-                className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
+                className="w-44 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors text-center"
                 style={{ backgroundColor: '#1f86c7' }}
                 onMouseOver={e => e.currentTarget.style.backgroundColor = '#166a9b'}
                 onMouseOut={e => e.currentTarget.style.backgroundColor = '#1f86c7'}
               >
-                Edit All
+                New Teacher
               </button>
-              <div className="flex flex-col items-end">
+              <div className="flex flex-col items-center">
                 <label
-                  className={`cursor-pointer px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  className={`cursor-pointer w-44 px-4 py-2 rounded-lg text-sm font-medium transition-colors text-center ${
                     importing ? 'bg-gray-300 text-gray-600' : ''
                   }`}
                   style={importing ? {} : { backgroundColor: '#ffc612', color: '#1a1a1a' }}
                   onMouseOver={e => { if (!importing) e.currentTarget.style.backgroundColor = '#e6b10f' }}
                   onMouseOut={e => { if (!importing) e.currentTarget.style.backgroundColor = '#ffc612' }}
                 >
-                  {importing ? 'Importing...' : '+ Import Teachers CSV'}
+                  {importing ? 'Importing...' : '+ Import CSV'}
                   <input type="file" accept=".csv" className="hidden" onChange={handleCSV} disabled={importing} />
                 </label>
                 <a
                   href={usersCsvTemplateHref}
                   download="users_import_template.csv"
-                  className="mt-1 text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                  className="mt-1 text-xs hover:underline"
+                  style={{ color: '#1f86c7' }}
                 >
                   Download CSV Template
                 </a>

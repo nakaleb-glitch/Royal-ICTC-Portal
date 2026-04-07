@@ -7,8 +7,24 @@ export default function Students() {
   const [students, setStudents] = useState([])
   const [loading, setLoading] = useState(true)
   const [importing, setImporting] = useState(false)
+  const [showForm, setShowForm] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState('')
   const [message, setMessage] = useState(null)
+  const [newStudent, setNewStudent] = useState({
+    student_id: '',
+    name_vn: '',
+    name_eng: '',
+    class: '',
+    level: 'primary',
+    programme: 'bilingual',
+  })
+  const studentsCsvTemplate = [
+    'Student ID,Name (VN),Name (ENG),Class,Level,Programme',
+    'S0001,Nguyen Van A,Alex Nguyen,2B2,primary,bilingual',
+    'S0002,Tran Thi B,Bella Tran,7A1,lower_secondary,integrated',
+  ].join('\n')
+  const studentsCsvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(studentsCsvTemplate)}`
 
   useEffect(() => {
     fetchStudents()
@@ -57,6 +73,47 @@ export default function Students() {
     })
   }
 
+  const createStudent = async () => {
+    if (!newStudent.student_id || !newStudent.name_eng || !newStudent.class || !newStudent.level || !newStudent.programme) {
+      setMessage({ type: 'error', text: 'Please complete Student ID, English Name, Class, Level, and Programme.' })
+      return
+    }
+
+    setSaving(true)
+    const { error } = await supabase
+      .from('students')
+      .upsert(
+        [{
+          student_id: newStudent.student_id.trim(),
+          name_vn: newStudent.name_vn.trim() || null,
+          name_eng: newStudent.name_eng.trim(),
+          class: newStudent.class.trim(),
+          level: newStudent.level,
+          programme: newStudent.programme,
+        }],
+        { onConflict: 'student_id' }
+      )
+
+    if (error) {
+      setMessage({ type: 'error', text: error.message })
+      setSaving(false)
+      return
+    }
+
+    setMessage({ type: 'success', text: 'Student saved successfully.' })
+    setNewStudent({
+      student_id: '',
+      name_vn: '',
+      name_eng: '',
+      class: '',
+      level: 'primary',
+      programme: 'bilingual',
+    })
+    setShowForm(false)
+    setSaving(false)
+    fetchStudents()
+  }
+
   const levelLabel = (l) => ({
     primary: 'Primary',
     lower_secondary: 'Lower Secondary',
@@ -79,15 +136,41 @@ export default function Students() {
     <Layout>
       <div className="mb-8 flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Students</h2>
-          <p className="text-gray-500 text-sm mt-1">{students.length} students in the system</p>
+          <h2 className="text-2xl font-bold text-gray-900">Student Management</h2>
+          <p className="text-gray-500 text-sm mt-1">Add, edit or remove student accounts.</p>
         </div>
-        <label className={`cursor-pointer px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors ${
-          importing ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'
-        }`}>
-          {importing ? 'Importing...' : '+ Import CSV'}
-          <input type="file" accept=".csv" className="hidden" onChange={handleCSV} disabled={importing} />
-        </label>
+        <div className="flex items-start gap-3">
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="w-44 px-4 py-2 text-white rounded-lg text-sm font-medium text-center"
+            style={{ backgroundColor: '#1f86c7' }}
+            onMouseOver={e => e.currentTarget.style.backgroundColor = '#166a9b'}
+            onMouseOut={e => e.currentTarget.style.backgroundColor = '#1f86c7'}
+          >
+            {showForm ? 'Cancel' : 'New Student'}
+          </button>
+          <div className="flex flex-col items-center">
+            <label
+              className={`cursor-pointer w-44 px-4 py-2 rounded-lg text-sm font-medium transition-colors text-center ${
+                importing ? 'bg-gray-300 text-gray-600' : ''
+              }`}
+              style={importing ? {} : { backgroundColor: '#ffc612', color: '#1a1a1a' }}
+              onMouseOver={e => { if (!importing) e.currentTarget.style.backgroundColor = '#e6b10f' }}
+              onMouseOut={e => { if (!importing) e.currentTarget.style.backgroundColor = '#ffc612' }}
+            >
+              {importing ? 'Importing...' : '+ Import CSV'}
+              <input type="file" accept=".csv" className="hidden" onChange={handleCSV} disabled={importing} />
+            </label>
+            <a
+              href={studentsCsvTemplateHref}
+              download="students_import_template.csv"
+              className="mt-1 text-xs hover:underline"
+              style={{ color: '#1f86c7' }}
+            >
+              Download CSV Template
+            </a>
+          </div>
+        </div>
       </div>
 
       {message && (
@@ -98,6 +181,81 @@ export default function Students() {
         }`}>
           {message.text}
           <button onClick={() => setMessage(null)} className="ml-4 opacity-50 hover:opacity-100">✕</button>
+        </div>
+      )}
+
+      {showForm && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+          <h3 className="font-semibold text-gray-900 mb-4">Add New Student</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-medium text-gray-500 block mb-1">Student ID</label>
+              <input
+                type="text"
+                value={newStudent.student_id}
+                onChange={e => setNewStudent({ ...newStudent, student_id: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-500 block mb-1">Class</label>
+              <input
+                type="text"
+                value={newStudent.class}
+                onChange={e => setNewStudent({ ...newStudent, class: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-500 block mb-1">English Name</label>
+              <input
+                type="text"
+                value={newStudent.name_eng}
+                onChange={e => setNewStudent({ ...newStudent, name_eng: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-500 block mb-1">Vietnamese Name (optional)</label>
+              <input
+                type="text"
+                value={newStudent.name_vn}
+                onChange={e => setNewStudent({ ...newStudent, name_vn: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-500 block mb-1">Level</label>
+              <select
+                value={newStudent.level}
+                onChange={e => setNewStudent({ ...newStudent, level: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="primary">primary</option>
+                <option value="lower_secondary">lower_secondary</option>
+                <option value="upper_secondary">upper_secondary</option>
+                <option value="high_school">high_school</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-500 block mb-1">Programme</label>
+              <select
+                value={newStudent.programme}
+                onChange={e => setNewStudent({ ...newStudent, programme: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="bilingual">bilingual</option>
+                <option value="integrated">integrated</option>
+              </select>
+            </div>
+          </div>
+          <button
+            onClick={createStudent}
+            disabled={saving}
+            className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:bg-gray-300"
+          >
+            {saving ? 'Saving...' : 'Save Student'}
+          </button>
         </div>
       )}
 
