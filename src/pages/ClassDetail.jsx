@@ -42,9 +42,45 @@ export default function ClassDetail() {
         </button>
         <h2 className="text-2xl font-bold text-gray-900">{cls.name}</h2>
         <p className="text-gray-500 text-sm mt-1">
-          {cls.subject} · {cls.programme === 'primary' ? 'Primary' : 'Lower Secondary'} · 2026–27
+          {cls.subject} · {cls.level === 'primary' ? 'Primary' : 'Secondary'} · {cls.programme === 'bilingual' ? 'Bilingual' : 'Integrated'} · 2026–27
         </p>
       </div>
+
+      {!selectedTerm ? (
+        <div className="space-y-10">
+
+          {/* Gradebooks Section */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Gradebooks</h3>
+            <div className="grid grid-cols-2 gap-4 max-w-lg">
+              {TERMS.map(term => (
+                <button key={term.key} onClick={() => setSelectedTerm(term.key)}
+                  className="bg-white rounded-xl border border-gray-200 p-6 text-left hover:shadow-sm transition-all"
+                  style={{ borderTopColor: '#d1232a', borderTopWidth: 3 }}>
+                  <div className="text-lg font-semibold text-gray-900">{term.label}</div>
+                  <div className="text-sm text-gray-400 mt-1">{term.weeks} weeks · 2026–27</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Teacher Resources Section */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Teacher Resources</h3>
+            <ResourceCards level={cls.level} programme={cls.programme} subject={cls.subject} />
+          </div>
+
+        </div>
+      ) : (
+        <Gradebook
+          cls={cls}
+          term={selectedTerm}
+          termLabel={TERMS.find(t => t.key === selectedTerm)?.label}
+          onBack={() => setSelectedTerm(null)}
+        />
+      )}
+    </Layout>
+  )
 
       {!selectedTerm ? (
         <div>
@@ -766,4 +802,65 @@ function CommentsTab({ classId, term, students }) {
       </div>
     </div>
   )
+
+  // ── Resource Cards ─────────────────────────────────────────────────────────
+function ResourceCards({ level, programme, subject }) {
+  const [resources, setResources] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => { fetchResources() }, [level, programme, subject])
+
+  const fetchResources = async () => {
+    const { data } = await supabase
+      .from('resource_links')
+      .select('*')
+      .eq('level', level)
+      .eq('programme', programme)
+      .eq('subject', subject)
+      .order('sort_order')
+    setResources(data || [])
+    setLoading(false)
+  }
+
+  const TYPE_ICON = { portal: '🌐', drive: '📁', pdf: '📄', other: '🔗' }
+  const TYPE_LABEL = { portal: 'Online Portal', drive: 'Google Drive', pdf: 'PDF', other: 'Link' }
+
+  if (loading) return <div className="text-sm text-gray-400">Loading resources...</div>
+  if (resources.length === 0) return (
+    <div className="text-sm text-gray-400 italic">No resources added yet for this class type.</div>
+  )
+
+  return (
+    <div className="grid grid-cols-2 gap-4 max-w-2xl sm:grid-cols-3">
+      {resources.map(r => {
+        const isComingSoon = !r.url
+        return isComingSoon ? (
+          <div key={r.id}
+            className="rounded-xl border border-gray-200 p-5 bg-gray-50 opacity-60 cursor-not-allowed">
+            <div className="text-2xl mb-2">{TYPE_ICON[r.resource_type]}</div>
+            <div className="font-semibold text-gray-400 text-sm">{r.title}</div>
+            {r.description && <div className="text-xs text-gray-400 mt-1">{r.description}</div>}
+            <div className="mt-3">
+              <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-400 rounded-full">Coming Soon</span>
+            </div>
+          </div>
+        ) : (
+          <a key={r.id} href={r.url} target="_blank" rel="noopener noreferrer"
+            className="rounded-xl border p-5 bg-white hover:shadow-md transition-all block"
+            style={{ borderTopColor: '#1f86c7', borderTopWidth: 3 }}>
+            <div className="text-2xl mb-2">{TYPE_ICON[r.resource_type]}</div>
+            <div className="font-semibold text-gray-900 text-sm">{r.title}</div>
+            {r.description && <div className="text-xs text-gray-500 mt-1">{r.description}</div>}
+            <div className="mt-3">
+              <span className="text-xs px-2 py-0.5 rounded-full font-medium text-white"
+                style={{ backgroundColor: '#1f86c7' }}>
+                {TYPE_LABEL[r.resource_type]}
+              </span>
+            </div>
+          </a>
+        )
+      })}
+    </div>
+  )
+}
 }
