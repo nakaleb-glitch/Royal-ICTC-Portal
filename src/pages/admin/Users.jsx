@@ -10,9 +10,9 @@ const SUBJECTS = ['ESL/GP', 'Mathematics', 'Science', 'VN ESL']
 export default function Users() {
   const { user: currentUser } = useAuth()
   const [users, setUsers] = useState([])
+  const [edits, setEdits] = useState({})
   const [loading, setLoading] = useState(true)
-  const [editingId, setEditingId] = useState(null)
-  const [editForm, setEditForm] = useState({})
+  const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [importing, setImporting] = useState(false)
@@ -23,26 +23,44 @@ export default function Users() {
     setLoading(true)
     const { data } = await supabase.from('users').select('*').order('full_name')
     setUsers(data || [])
+    setEdits({})
     setLoading(false)
   }
 
-  const startEdit = (user) => {
-    setEditingId(user.id)
-    setEditForm({ full_name: user.full_name || '', role: user.role, level: user.level || '', subject: user.subject || '' })
+  const handleEdit = (userId, field, value) => {
+    setEdits(prev => ({
+      ...prev,
+      [userId]: { ...prev[userId], [field]: value }
+    }))
   }
 
-  const saveEdit = async (userId) => {
-    const { error } = await supabase
-      .from('users')
-      .update({ full_name: editForm.full_name, role: editForm.role, level: editForm.level, subject: editForm.subject })
-      .eq('id', userId)
-    if (error) {
-      setMessage({ type: 'error', text: error.message })
-    } else {
-      setMessage({ type: 'success', text: 'User updated successfully.' })
-      setEditingId(null)
-      fetchUsers()
+  const hasChanges = Object.keys(edits).length > 0
+
+  const saveAll = async () => {
+    setSaving(true)
+    const updates = Object.entries(edits)
+    let errorCount = 0
+
+    for (const [userId, fields] of updates) {
+      const { error } = await supabase
+        .from('users')
+        .update(fields)
+        .eq('id', userId)
+      if (error) errorCount++
     }
+
+    if (errorCount > 0) {
+      setMessage({ type: 'error', text: `${errorCount} updates failed. Please try again.` })
+    } else {
+      setMessage({ type: 'success', text: `${updates.length} teachers updated successfully.` })
+    }
+
+    setSaving(false)
+    fetchUsers()
+  }
+
+  const getVal = (user, field) => {
+    return edits[user.id]?.[field] ?? user[field] ?? ''
   }
 
   const deleteUser = async (userId) => {
@@ -98,10 +116,18 @@ export default function Users() {
           <h2 className="text-2xl font-bold text-gray-900">Users</h2>
           <p className="text-gray-500 text-sm mt-1">{users.length} users in the system</p>
         </div>
-        <label className={`cursor-pointer px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors ${importing ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'}`}>
-          {importing ? 'Importing...' : '+ Import Teachers CSV'}
-          <input type="file" accept=".csv" className="hidden" onChange={handleCSV} disabled={importing} />
-        </label>
+        <div className="flex gap-3">
+          {hasChanges && (
+            <button onClick={saveAll} disabled={saving}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:bg-gray-300">
+              {saving ? 'Saving...' : `Save Changes (${Object.keys(edits).length})`}
+            </button>
+          )}
+          <label className={`cursor-pointer px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors ${importing ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'}`}>
+            {importing ? 'Importing...' : '+ Import Teachers CSV'}
+            <input type="file" accept=".csv" className="hidden" onChange={handleCSV} disabled={importing} />
+          </label>
+        </div>
       </div>
 
       {message && (
@@ -139,72 +165,52 @@ export default function Users() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {users.map(user => (
-                <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3">
-                    {editingId === user.id ? (
-                      <input type="text" value={editForm.full_name} onChange={e => setEditForm({ ...editForm, full_name: e.target.value })}
-                        className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-36" />
-                    ) : (
-                      <span className="font-medium text-gray-900">
-                        {user.full_name || <span className="text-gray-400 italic">No name</span>}
-                        {user.id === currentUser?.id && <span className="ml-2 text-xs text-gray-400">(you)</span>}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">{user.email}</td>
-                  <td className="px-4 py-3">
-                    {editingId === user.id ? (
-                      <select value={editForm.role} onChange={e => setEditForm({ ...editForm, role: e.target.value })}
-                        className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              {users.map(user => {
+                const isEdited = !!edits[user.id]
+                return (
+                  <tr key={user.id} className={isEdited ? 'bg-yellow-50' : 'hover:bg-gray-50'}>
+                    <td className="px-4 py-2">
+                      <input type="text" value={getVal(user, 'full_name')}
+                        onChange={e => handleEdit(user.id, 'full_name', e.target.value)}
+                        className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm w-36 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      {user.id === currentUser?.id && <span className="ml-2 text-xs text-gray-400">(you)</span>}
+                    </td>
+                    <td className="px-4 py-2 text-gray-600">{user.email}</td>
+                    <td className="px-4 py-2">
+                      <select value={getVal(user, 'role')}
+                        onChange={e => handleEdit(user.id, 'role', e.target.value)}
+                        className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <option value="teacher">Teacher</option>
                         <option value="admin">Admin</option>
                       </select>
-                    ) : (
-                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${user.role === 'admin' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
-                        {user.role}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    {editingId === user.id ? (
-                      <select value={editForm.level} onChange={e => setEditForm({ ...editForm, level: e.target.value })}
-                        className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </td>
+                    <td className="px-4 py-2">
+                      <select value={getVal(user, 'level')}
+                        onChange={e => handleEdit(user.id, 'level', e.target.value)}
+                        className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <option value="">—</option>
                         {LEVELS.map(l => <option key={l} value={l}>{l === 'primary' ? 'Primary' : 'Secondary'}</option>)}
                       </select>
-                    ) : (
-                      <span className="text-gray-600 capitalize">{user.level || <span className="text-gray-300">—</span>}</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    {editingId === user.id ? (
-                      <select value={editForm.subject} onChange={e => setEditForm({ ...editForm, subject: e.target.value })}
-                        className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </td>
+                    <td className="px-4 py-2">
+                      <select value={getVal(user, 'subject')}
+                        onChange={e => handleEdit(user.id, 'subject', e.target.value)}
+                        className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <option value="">—</option>
                         {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
-                    ) : (
-                      <span className="text-gray-600">{user.subject || <span className="text-gray-300">—</span>}</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    {editingId === user.id ? (
-                      <div className="flex gap-2">
-                        <button onClick={() => saveEdit(user.id)} className="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700">Save</button>
-                        <button onClick={() => setEditingId(null)} className="px-3 py-1 border border-gray-300 text-gray-600 rounded-lg text-xs hover:bg-gray-50">Cancel</button>
-                      </div>
-                    ) : (
-                      <div className="flex gap-2">
-                        <button onClick={() => startEdit(user)} className="px-3 py-1 border border-gray-300 text-gray-600 rounded-lg text-xs hover:bg-gray-50">Edit</button>
-                        {user.id !== currentUser?.id && (
-                          <button onClick={() => setConfirmDelete(user)} className="px-3 py-1 border border-red-200 text-red-500 rounded-lg text-xs hover:bg-red-50">Remove</button>
-                        )}
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-4 py-2">
+                      {user.id !== currentUser?.id && (
+                        <button onClick={() => setConfirmDelete(user)}
+                          className="px-3 py-1 border border-red-200 text-red-500 rounded-lg text-xs hover:bg-red-50">
+                          Remove
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         )}
