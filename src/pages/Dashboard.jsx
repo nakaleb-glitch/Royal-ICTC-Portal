@@ -9,6 +9,7 @@ export default function Dashboard() {
   const [classes, setClasses] = useState([])
   const [students, setStudents] = useState([])
   const [newBehaviorReportsCount, setNewBehaviorReportsCount] = useState(0)
+  const [newPasswordResetCount, setNewPasswordResetCount] = useState(0)
   const [teacherEvents, setTeacherEvents] = useState([])
   const [teacherDeadlines, setTeacherDeadlines] = useState([])
   const [selectedDashboardItem, setSelectedDashboardItem] = useState(null)
@@ -24,22 +25,28 @@ export default function Dashboard() {
     setLoading(true)
 
     if (profile.role === 'admin') {
-      const [{ data: classData }, { data: studentData }, { count: newReportsCount }] = await Promise.all([
+      const [{ data: classData }, { data: studentData }, { count: newReportsCount }, { count: newResetCount }] = await Promise.all([
         supabase.from('classes').select('*').order('name'),
         supabase.from('students').select('*'),
         supabase
           .from('behavior_reports')
           .select('id', { count: 'exact', head: true })
           .eq('status', 'new'),
+        supabase
+          .from('password_reset_requests')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'new'),
       ])
       setClasses(classData || [])
       setStudents(studentData || [])
       setNewBehaviorReportsCount(newReportsCount || 0)
+      setNewPasswordResetCount(newResetCount || 0)
       setLoading(false)
       return
     }
 
     setNewBehaviorReportsCount(0)
+    setNewPasswordResetCount(0)
     const today = new Date().toISOString().slice(0, 10)
     const [{ data: classData }, { data: dashboardItems }] = await Promise.all([
       supabase.from('classes').select('*').eq('teacher_id', profile.id).order('name'),
@@ -276,9 +283,14 @@ export default function Dashboard() {
               </Link>
               <Link
                 to="/admin/users"
-                className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block"
+                className="relative bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block"
                 style={{ borderTopColor: CARD_ACCENT.users, borderTopWidth: 3 }}
               >
+                {newPasswordResetCount > 0 && (
+                  <span className="absolute top-3 right-3 min-w-[1.5rem] h-6 px-2 rounded-full bg-red-600 text-white text-xs font-semibold flex items-center justify-center">
+                    {newPasswordResetCount}
+                  </span>
+                )}
                 <div className="font-semibold text-gray-900">Teacher Management</div>
                 <div className="text-sm text-gray-500 mt-1">View, add, edit or remove teacher accounts.</div>
               </Link>
@@ -316,7 +328,7 @@ export default function Dashboard() {
 
           {/* Right column — Insights */}
           <div className="lg:col-span-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Dashboard Insights</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Campus Statistics</h3>
             <div className="space-y-6">
               <div className="bg-white rounded-xl border border-gray-200 p-4">
                 <div className="flex flex-wrap items-end gap-4">

@@ -24,6 +24,8 @@ export default function Users() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const [confirmReset, setConfirmReset] = useState(null)
+  const [resetRequestsByStaffId, setResetRequestsByStaffId] = useState({})
   const [importing, setImporting] = useState(false)
   const [rowEditingId, setRowEditingId] = useState(null)
   const [rowEditForm, setRowEditForm] = useState({
@@ -82,13 +84,27 @@ export default function Users() {
       .toLowerCase()
       .replace(/\b\w/g, (char) => char.toUpperCase())
 
+  const formatSubjectDisplay = (value) => {
+    const normalized = String(value || '').trim().toLowerCase()
+    if (normalized === 'esl/gp' || normalized === 'eslgp') return 'ESL/GP'
+    if (normalized === 'mathematics') return 'Mathematics'
+    if (normalized === 'science') return 'Science'
+    if (normalized === 'vn esl' || normalized === 'vnesl') return 'VN ESL'
+    return formatDisplayText(value)
+  }
+
   useEffect(() => { fetchUsers() }, [])
 
   const fetchUsers = async () => {
     setLoading(true)
-    const [{ data: usersData }, { data: classesData }] = await Promise.all([
+    const [{ data: usersData }, { data: classesData }, { data: resetRequestsData }] = await Promise.all([
       supabase.from('users').select('*').order('full_name'),
       supabase.from('classes').select('id, name, subject, teacher_id').order('name'),
+      supabase
+        .from('password_reset_requests')
+        .select('id, staff_id, status, created_at')
+        .eq('status', 'new')
+        .order('created_at', { ascending: false }),
     ])
 
     const classMap = {}
@@ -103,6 +119,13 @@ export default function Users() {
     })
 
     setClassesByTeacher(classMap)
+    const requestMap = {}
+    ;(resetRequestsData || []).forEach((req) => {
+      const key = String(req.staff_id || '').trim().toLowerCase()
+      if (!key) return
+      requestMap[key] = (requestMap[key] || 0) + 1
+    })
+    setResetRequestsByStaffId(requestMap)
     const data = usersData
     setUsers(data || [])
     setLoading(false)
@@ -255,7 +278,18 @@ export default function Users() {
     setUsers(prev =>
       prev.map(u => (u.id === targetUser.id ? { ...u, must_change_password: true } : u))
     )
+
+    const normalizedStaffId = String(targetUser.staff_id || '').trim().toLowerCase()
+    if (normalizedStaffId) {
+      await supabase
+        .from('password_reset_requests')
+        .update({ status: 'resolved', resolved_at: new Date().toISOString() })
+        .eq('status', 'new')
+        .ilike('staff_id', targetUser.staff_id)
+    }
+
     setMessage({ type: 'success', text: `Password reset for ${targetUser.email}. Default password is royal@123.` })
+    setConfirmReset(null)
     fetchUsers()
   }
 
@@ -421,6 +455,29 @@ export default function Users() {
         </div>
       )}
 
+      {/* Confirm Reset Password */}
+      {confirmReset && (
+        <div className="mb-6 px-4 py-4 rounded-lg bg-red-50 border border-red-200">
+          <p className="text-sm font-medium text-red-700 mb-3">
+            Reset password for <strong>{confirmReset.full_name || confirmReset.email}</strong>? Their password will be set to <strong>royal@123</strong> and they will be required to change it on next login.
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => resetUserPassword(confirmReset)}
+              className="px-4 py-1.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700"
+            >
+              Yes, reset password
+            </button>
+            <button
+              onClick={() => setConfirmReset(null)}
+              className="px-4 py-1.5 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <div className={`bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible ${editing ? 'mb-24' : ''}`}>
         {loading ? (
@@ -445,6 +502,7 @@ export default function Users() {
             <tbody className="divide-y divide-gray-100">
               {users.map(user => {
                 const isRowEditing = !editing && rowEditingId === user.id
+                const resetRequestCount = resetRequestsByStaffId[String(user.staff_id || '').trim().toLowerCase()] || 0
                 return (
                 <tr key={user.id} className={editing ? 'bg-yellow-50' : 'hover:bg-gray-50'}>
                   <td className="px-6 py-3">
@@ -470,6 +528,14 @@ export default function Users() {
                             title={user.must_change_password ? 'Pending activation' : 'Activated'}
                           />
                           <span>{user.full_name || <span className="text-gray-400 italic">No name</span>}</span>
+                          {resetRequestCount > 0 && (
+                            <span
+                              className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium"
+                              style={{ backgroundColor: '#FDEBEC', color: '#d1232a' }}
+                            >
+                              Reset Requested
+                            </span>
+                          )}
                           {user.id === currentUser?.id && (
                             <span className="text-xs text-gray-400">(you)</span>
                           )}
@@ -592,7 +658,7 @@ export default function Users() {
                       </select>
                     ) : (
                       user.subject
-                        ? <span className="text-gray-700">{formatDisplayText(user.subject)}</span>
+                        ? <span className="text-gray-700">{formatSubjectDisplay(user.subject)}</span>
                         : <span className="text-gray-400 italic text-xs">—</span>
                     )}
                   </td>
@@ -624,8 +690,12 @@ export default function Users() {
                             Edit
                           </button>
                           <button
-                            onClick={() => resetUserPassword(user)}
-                            className="px-3 py-1 border border-amber-300 text-amber-700 rounded-lg text-xs hover:bg-amber-50"
+                            onClick={() => setConfirmReset(user)}
+                            className={`px-3 py-1 border rounded-lg text-xs ${
+                              resetRequestCount > 0
+                                ? 'border-red-300 text-red-700 bg-red-50 hover:bg-red-100'
+                                : 'border-amber-300 text-amber-700 hover:bg-amber-50'
+                            }`}
                           >
                             Reset Password
                           </button>

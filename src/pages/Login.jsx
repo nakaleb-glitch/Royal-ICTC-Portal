@@ -1,6 +1,7 @@
 import { useAuth } from '../contexts/AuthContext'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
 
 export default function Login() {
   const { user, signInWithGoogle, signInWithStaffId } = useAuth()
@@ -10,6 +11,8 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [requestingReset, setRequestingReset] = useState(false)
+  const [resetMessage, setResetMessage] = useState(null)
 
   useEffect(() => {
     if (user) navigate('/dashboard')
@@ -19,11 +22,44 @@ export default function Login() {
     e.preventDefault()
     setSubmitting(true)
     setError('')
+    setResetMessage(null)
     const { error: signInError } = await signInWithStaffId(staffId, password)
     if (signInError) {
       setError(signInError.message || 'Could not sign in. Please check credentials.')
     }
     setSubmitting(false)
+  }
+
+  const handleForgotPassword = async () => {
+    const normalizedStaffId = String(staffId || '').trim()
+    if (!normalizedStaffId) {
+      setError('Please enter your Staff ID first.')
+      setResetMessage(null)
+      return
+    }
+
+    setRequestingReset(true)
+    setError('')
+    setResetMessage(null)
+
+    const { error: requestError } = await supabase
+      .from('password_reset_requests')
+      .insert({
+        staff_id: normalizedStaffId,
+        status: 'new',
+      })
+
+    // Keep response generic for security and UX.
+    if (requestError && !String(requestError.message || '').toLowerCase().includes('duplicate')) {
+      setResetMessage({ type: 'error', text: 'Could not send request right now. Please try again.' })
+    } else {
+      setResetMessage({
+        type: 'success',
+        text: 'Password reset request sent. Please wait for an admin to reset your account.',
+      })
+    }
+
+    setRequestingReset(false)
   }
 
   return (
@@ -67,6 +103,11 @@ export default function Login() {
                 {error && (
                   <p className="text-xs text-red-600">{error}</p>
                 )}
+                {resetMessage && (
+                  <p className={`text-xs ${resetMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+                    {resetMessage.text}
+                  </p>
+                )}
                 <button
                   type="submit"
                   disabled={submitting}
@@ -74,6 +115,14 @@ export default function Login() {
                   style={{ backgroundColor: '#1f86c7' }}
                 >
                   {submitting ? 'Signing in...' : 'Sign In'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={requestingReset}
+                  className="w-full rounded-xl px-6 py-3 border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-60"
+                >
+                  {requestingReset ? 'Sending request...' : 'Forgot Password'}
                 </button>
               </form>
             ) : (
