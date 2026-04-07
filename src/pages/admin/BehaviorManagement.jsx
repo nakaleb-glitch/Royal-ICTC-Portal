@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import Layout from '../../components/Layout'
 import { supabase } from '../../lib/supabase'
+import { useNavigate } from 'react-router-dom'
 
 const STATUS_OPTIONS = ['new', 'reviewed', 'resolved']
 
 export default function BehaviorManagement() {
+  const navigate = useNavigate()
   const [reports, setReports] = useState([])
   const [loading, setLoading] = useState(true)
   const [updatingId, setUpdatingId] = useState(null)
@@ -50,6 +52,12 @@ export default function BehaviorManagement() {
   return (
     <Layout>
       <div className="mb-8">
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="text-sm text-gray-400 hover:text-gray-600 mb-4 flex items-center gap-1"
+        >
+          ← Go Back
+        </button>
         <h2 className="text-2xl font-bold text-gray-900">Behavior Management</h2>
         <p className="text-gray-500 text-sm mt-1">Review teacher-submitted behavior reports and track follow-up status.</p>
       </div>

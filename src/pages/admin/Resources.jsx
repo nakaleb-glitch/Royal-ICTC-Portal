@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import Layout from '../../components/Layout'
+import { useNavigate } from 'react-router-dom'
 
 const LEVELS = ['primary', 'secondary']
 const PROGRAMMES = ['bilingual', 'integrated']
@@ -16,6 +17,7 @@ const PROGRAMME_LABEL = { bilingual: 'Bilingual', integrated: 'Integrated' }
 const TYPE_ICON = { portal: '🌐', drive: '📁', pdf: '📄', other: '🔗' }
 
 export default function Resources() {
+  const navigate = useNavigate()
   const [resources, setResources] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState({ level: 'all', grade: 'all', programme: 'all', subject: 'all' })
@@ -115,6 +117,12 @@ export default function Resources() {
 
   return (
     <Layout>
+      <button
+        onClick={() => navigate('/dashboard')}
+        className="text-sm text-gray-400 hover:text-gray-600 mb-4 flex items-center gap-1"
+      >
+        ← Go Back
+      </button>
       <div className="mb-8 flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Resource Management</h2>

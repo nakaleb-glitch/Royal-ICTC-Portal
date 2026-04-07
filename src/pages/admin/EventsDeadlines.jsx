@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Layout from '../../components/Layout'
 import { supabase } from '../../lib/supabase'
+import { useNavigate } from 'react-router-dom'
 
 const TYPE_LABEL = {
   event: 'Event',
@@ -8,6 +9,7 @@ const TYPE_LABEL = {
 }
 
 export default function EventsDeadlines() {
+  const navigate = useNavigate()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -110,6 +112,12 @@ export default function EventsDeadlines() {
 
   return (
     <Layout>
+      <button
+        onClick={() => navigate('/dashboard')}
+        className="text-sm text-gray-400 hover:text-gray-600 mb-4 flex items-center gap-1"
+      >
+        ← Go Back
+      </button>
       <div className="mb-8 flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Event & Admin Deadline Management</h2>

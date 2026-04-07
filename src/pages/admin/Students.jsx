@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import Layout from '../../components/Layout'
 import Papa from 'papaparse'
+import { useNavigate } from 'react-router-dom'
 
 export default function Students() {
+  const navigate = useNavigate()
   const [students, setStudents] = useState([])
   const [loading, setLoading] = useState(true)
   const [importing, setImporting] = useState(false)
@@ -212,6 +214,12 @@ export default function Students() {
 
   return (
     <Layout>
+      <button
+        onClick={() => navigate('/dashboard')}
+        className="text-sm text-gray-400 hover:text-gray-600 mb-4 flex items-center gap-1"
+      >
+        ← Go Back
+      </button>
       <div className="mb-8 flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Student Management</h2>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import Layout from '../../components/Layout'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import Papa from 'papaparse'
 
 const SUBJECTS = ['ESL', 'Mathematics', 'Science', 'Global Perspectives']
@@ -46,6 +46,7 @@ const normalizeSubject = (value) => {
 }
 
 export default function Classes() {
+  const navigate = useNavigate()
   const [classes, setClasses] = useState([])
   const [teachers, setTeachers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -437,6 +438,12 @@ export default function Classes() {
 
   return (
     <Layout>
+      <button
+        onClick={() => navigate('/dashboard')}
+        className="text-sm text-gray-400 hover:text-gray-600 mb-4 flex items-center gap-1"
+      >
+        ← Go Back
+      </button>
       <div className="mb-8 flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Class Management</h2>

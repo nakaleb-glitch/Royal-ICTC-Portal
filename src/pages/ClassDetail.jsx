@@ -247,7 +247,6 @@ function ResourceCards({ level, grade, programme, subject }) {
     setLoading(false)
   }
 
-  const TYPE_ICON = { portal: '🌐', drive: '📁', pdf: '📄', other: '🔗' }
   const TYPE_LABEL = { portal: 'Online Portal', drive: 'Google Drive', pdf: 'PDF', other: 'Link' }
 
   if (loading) return <div className="text-sm text-gray-400">Loading resources...</div>
@@ -262,7 +261,6 @@ function ResourceCards({ level, grade, programme, subject }) {
         return isComingSoon ? (
           <div key={r.id}
             className="rounded-xl border border-gray-200 p-5 bg-gray-50 opacity-60 cursor-not-allowed">
-            <div className="text-2xl mb-2">{TYPE_ICON[r.resource_type]}</div>
             <div className="font-semibold text-gray-400 text-sm">{r.title}</div>
             {r.description && <div className="text-xs text-gray-400 mt-1">{r.description}</div>}
             <div className="mt-3">
@@ -273,7 +271,6 @@ function ResourceCards({ level, grade, programme, subject }) {
           <a key={r.id} href={r.url} target="_blank" rel="noopener noreferrer"
             className="rounded-xl border p-5 bg-white hover:shadow-md transition-all block"
             style={{ borderTopColor: '#1f86c7', borderTopWidth: 3 }}>
-            <div className="text-2xl mb-2">{TYPE_ICON[r.resource_type]}</div>
             <div className="font-semibold text-gray-900 text-sm">{r.title}</div>
             {r.description && <div className="text-xs text-gray-500 mt-1">{r.description}</div>}
             <div className="mt-3">

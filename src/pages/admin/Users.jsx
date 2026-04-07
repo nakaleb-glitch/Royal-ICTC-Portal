@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import Layout from '../../components/Layout'
 import { useAuth } from '../../contexts/AuthContext'
 import Papa from 'papaparse'
+import { useNavigate } from 'react-router-dom'
 
 const LEVELS = ['primary', 'secondary']
 const SUBJECTS = ['ESL/GP', 'Mathematics', 'Science', 'VN ESL']
@@ -13,6 +14,7 @@ const levelLabel = (l) => ({
 }[l] || String(l || '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()))
 
 export default function Users() {
+  const navigate = useNavigate()
   const { user: currentUser } = useAuth()
   const [users, setUsers] = useState([])
   const [classesByTeacher, setClassesByTeacher] = useState({})
@@ -331,6 +333,12 @@ export default function Users() {
 
   return (
     <Layout>
+      <button
+        onClick={() => navigate('/dashboard')}
+        className="text-sm text-gray-400 hover:text-gray-600 mb-4 flex items-center gap-1"
+      >
+        ← Go Back
+      </button>
       {/* Header */}
       <div className="mb-8 flex justify-between items-center">
         <div>
