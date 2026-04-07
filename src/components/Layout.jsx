@@ -54,6 +54,7 @@ export default function Layout({ children }) {
   const displayRole = String(profile?.role || '')
     .toLowerCase()
     .replace(/\b\w/g, (char) => char.toUpperCase())
+  const idLabel = profile?.role === 'student' ? 'Student ID' : 'Staff ID'
   const avatarUrl = user?.user_metadata?.avatar_url || null
   const avatarFallback = String(profile?.full_name || user?.email || 'U').trim().charAt(0).toUpperCase()
 
@@ -198,7 +199,7 @@ export default function Layout({ children }) {
               )}
               <div className="leading-tight text-right">
                 <div className="text-xs font-medium text-gray-100">{profile?.full_name || 'User'}</div>
-                <div className="text-xs text-gray-400">Staff ID: {profile?.staff_id || '—'}</div>
+                <div className="text-xs text-gray-400">{idLabel}: {profile?.staff_id || '—'}</div>
               </div>
               <span className="text-xs px-2 py-1 rounded-full font-medium"
                 style={{

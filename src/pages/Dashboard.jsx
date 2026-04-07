@@ -9,7 +9,10 @@ export default function Dashboard() {
   const [classes, setClasses] = useState([])
   const [students, setStudents] = useState([])
   const [newBehaviorReportsCount, setNewBehaviorReportsCount] = useState(0)
-  const [newPasswordResetCount, setNewPasswordResetCount] = useState(0)
+  const [newTeacherPasswordResetCount, setNewTeacherPasswordResetCount] = useState(0)
+  const [newStudentPasswordResetCount, setNewStudentPasswordResetCount] = useState(0)
+  const [studentAssignmentDeadlines, setStudentAssignmentDeadlines] = useState([])
+  const [studentAssessments, setStudentAssessments] = useState([])
   const [teacherEvents, setTeacherEvents] = useState([])
   const [teacherDeadlines, setTeacherDeadlines] = useState([])
   const [selectedDashboardItem, setSelectedDashboardItem] = useState(null)
@@ -25,7 +28,7 @@ export default function Dashboard() {
     setLoading(true)
 
     if (profile.role === 'admin') {
-      const [{ data: classData }, { data: studentData }, { count: newReportsCount }, { count: newResetCount }] = await Promise.all([
+      const [{ data: classData }, { data: studentData }, { count: newReportsCount }, { data: newResetRequests }, { data: userRows }] = await Promise.all([
         supabase.from('classes').select('*').order('name'),
         supabase.from('students').select('*'),
         supabase
@@ -34,20 +37,95 @@ export default function Dashboard() {
           .eq('status', 'new'),
         supabase
           .from('password_reset_requests')
-          .select('id', { count: 'exact', head: true })
+          .select('staff_id')
           .eq('status', 'new'),
+        supabase.from('users').select('staff_id, role'),
       ])
+      const roleById = new Map(
+        (userRows || []).map((u) => [String(u.staff_id || '').trim().toLowerCase(), u.role])
+      )
+      let teacherResetCount = 0
+      let studentResetCount = 0
+      ;(newResetRequests || []).forEach((req) => {
+        const role = roleById.get(String(req.staff_id || '').trim().toLowerCase())
+        if (role === 'student') studentResetCount += 1
+        else if (role === 'teacher') teacherResetCount += 1
+      })
       setClasses(classData || [])
       setStudents(studentData || [])
       setNewBehaviorReportsCount(newReportsCount || 0)
-      setNewPasswordResetCount(newResetCount || 0)
+      setNewTeacherPasswordResetCount(teacherResetCount)
+      setNewStudentPasswordResetCount(studentResetCount)
       setLoading(false)
       return
     }
 
     setNewBehaviorReportsCount(0)
-    setNewPasswordResetCount(0)
+    setNewTeacherPasswordResetCount(0)
+    setNewStudentPasswordResetCount(0)
     const today = new Date().toISOString().slice(0, 10)
+
+    if (profile.role === 'student') {
+      let studentClasses = []
+      if (profile.student_id_ref) {
+        const { data: enrollmentRows } = await supabase
+          .from('class_students')
+          .select('classes(*)')
+          .eq('student_id', profile.student_id_ref)
+
+        studentClasses = (enrollmentRows || [])
+          .map((row) => row.classes)
+          .filter(Boolean)
+          .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { numeric: true }))
+
+        const teacherIds = Array.from(
+          new Set(studentClasses.map((cls) => cls.teacher_id).filter(Boolean))
+        )
+        if (teacherIds.length > 0) {
+          const { data: teacherRows } = await supabase
+            .from('users')
+            .select('id, full_name')
+            .in('id', teacherIds)
+
+          const teacherNameById = Object.fromEntries((teacherRows || []).map((t) => [t.id, t.full_name]))
+          studentClasses = studentClasses.map((cls) => ({
+            ...cls,
+            teacher_name: teacherNameById[cls.teacher_id] || null,
+          }))
+        }
+      }
+
+      setClasses(studentClasses)
+      const classIds = studentClasses.map((c) => c.id)
+      if (classIds.length > 0) {
+        const { data: assignmentRows } = await supabase
+          .from('assignments')
+          .select('id, class_id, name, term, created_at')
+          .in('class_id', classIds)
+          .order('created_at', { ascending: false })
+
+        const classNameById = Object.fromEntries(studentClasses.map((c) => [c.id, c.name]))
+        const rows = (assignmentRows || []).map((row) => ({
+          ...row,
+          class_name: classNameById[row.class_id] || 'Class',
+        }))
+
+        const isAssessment = (name) => /(test|exam|quiz|assessment|unit)/i.test(String(name || ''))
+        const assessmentRows = rows.filter((row) => isAssessment(row.name)).slice(0, 8)
+        const deadlineRows = rows.filter((row) => !isAssessment(row.name)).slice(0, 8)
+
+        setStudentAssessments(assessmentRows)
+        setStudentAssignmentDeadlines(deadlineRows)
+      } else {
+        setStudentAssessments([])
+        setStudentAssignmentDeadlines([])
+      }
+      setTeacherEvents([])
+      setTeacherDeadlines([])
+      setLoading(false)
+      return
+    }
+
     const [{ data: classData }, { data: dashboardItems }] = await Promise.all([
       supabase.from('classes').select('*').eq('teacher_id', profile.id).order('name'),
       supabase
@@ -267,9 +345,14 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Link
                 to="/admin/students"
-                className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block"
+                className="relative bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block"
                 style={{ borderTopColor: CARD_ACCENT.students, borderTopWidth: 3 }}
               >
+                {newStudentPasswordResetCount > 0 && (
+                  <span className="absolute top-3 right-3 min-w-[1.5rem] h-6 px-2 rounded-full bg-red-600 text-white text-xs font-semibold flex items-center justify-center">
+                    {newStudentPasswordResetCount}
+                  </span>
+                )}
                 <div className="font-semibold text-gray-900">Student Management</div>
                 <div className="text-sm text-gray-500 mt-1">Add, edit or remove student accounts.</div>
               </Link>
@@ -286,9 +369,9 @@ export default function Dashboard() {
                 className="relative bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block"
                 style={{ borderTopColor: CARD_ACCENT.users, borderTopWidth: 3 }}
               >
-                {newPasswordResetCount > 0 && (
+                {newTeacherPasswordResetCount > 0 && (
                   <span className="absolute top-3 right-3 min-w-[1.5rem] h-6 px-2 rounded-full bg-red-600 text-white text-xs font-semibold flex items-center justify-center">
-                    {newPasswordResetCount}
+                    {newTeacherPasswordResetCount}
                   </span>
                 )}
                 <div className="font-semibold text-gray-900">Teacher Management</div>
@@ -385,6 +468,83 @@ export default function Dashboard() {
                     integrated: '#ffc612',
                   }}
                 />
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : profile?.role === 'student' ? (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="lg:col-span-7">
+            <div className="bg-white rounded-xl border border-gray-200 p-5" style={{ borderTopColor: CARD_ACCENT.class, borderTopWidth: 3 }}>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">My Classes</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-4">
+                {classes.length === 0 ? (
+                  <div className="col-span-full rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
+                    No classes assigned yet. Please contact your administrator.
+                  </div>
+                ) : (
+                  classes.map(cls => (
+                    <div
+                      key={cls.id}
+                      className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all"
+                      style={{ borderTopColor: '#9ca3af', borderTopWidth: 3 }}
+                    >
+                      <div className="font-semibold text-gray-900">{cls.name}</div>
+                      <div className="text-sm text-gray-500 mt-1">
+                        {levelLabel(cls.level)} - {programmeLabel(cls.programme)}
+                      </div>
+                      <div className="text-xs text-gray-400 mt-2">
+                        Teacher: {cls.teacher_name || 'TBA'}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="lg:col-span-5 space-y-4">
+            <div className="bg-white rounded-xl border border-gray-200 p-5" style={{ borderTopColor: CARD_ACCENT.events, borderTopWidth: 3 }}>
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">Assignment Deadlines</h3>
+              <p className="text-xs text-gray-500 mb-3">Homework and project tasks from your classes.</p>
+              <div className="space-y-2">
+                {studentAssignmentDeadlines.length === 0 ? (
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-500">
+                    No assignment deadlines posted yet.
+                  </div>
+                ) : studentAssignmentDeadlines.map(item => (
+                  <div
+                    key={item.id}
+                    className="w-full text-left rounded-lg border border-gray-200 bg-gray-50 px-3 py-2"
+                  >
+                    <div className="text-sm font-medium text-gray-800">{item.name}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      {item.class_name} • {String(item.term || '').replace('_', ' ')}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl border border-gray-200 p-5" style={{ borderTopColor: CARD_ACCENT.deadlines, borderTopWidth: 3 }}>
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">Upcoming Assessments</h3>
+              <p className="text-xs text-gray-500 mb-3">Unit tests and exams from your classes.</p>
+              <div className="space-y-2">
+                {studentAssessments.length === 0 ? (
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-500">
+                    No upcoming assessments posted yet.
+                  </div>
+                ) : studentAssessments.map(item => (
+                  <div
+                    key={item.id}
+                    className="w-full text-left rounded-lg border border-gray-200 bg-gray-50 px-3 py-2"
+                  >
+                    <div className="text-sm font-medium text-gray-800">{item.name}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      {item.class_name} • {String(item.term || '').replace('_', ' ')}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

@@ -13,11 +13,14 @@ import ClassDetail from './pages/ClassDetail'
 import UserSettings from './pages/UserSettings'
 import BehaviorReport from './pages/BehaviorReport'
 
-const ProtectedRoute = ({ children, adminOnly = false }) => {
+const ProtectedRoute = ({ children, adminOnly = false, allowedRoles = null }) => {
   const { user, profile, loading } = useAuth()
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading...</div>
   if (!user) return <Navigate to="/login" />
   if (adminOnly && profile?.role !== 'admin') return <Navigate to="/dashboard" />
+  if (Array.isArray(allowedRoles) && allowedRoles.length > 0 && !allowedRoles.includes(profile?.role)) {
+    return <Navigate to="/dashboard" />
+  }
   return children
 }
 
@@ -28,8 +31,8 @@ function AppRoutes() {
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><UserSettings /></ProtectedRoute>} />
-      <Route path="/class/:classId" element={<ProtectedRoute><ClassDetail /></ProtectedRoute>} />
-      <Route path="/teacher/behavior-report" element={<ProtectedRoute><BehaviorReport /></ProtectedRoute>} />
+      <Route path="/class/:classId" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><ClassDetail /></ProtectedRoute>} />
+      <Route path="/teacher/behavior-report" element={<ProtectedRoute allowedRoles={['teacher']}><BehaviorReport /></ProtectedRoute>} />
       <Route path="/admin/students" element={<ProtectedRoute adminOnly><Students /></ProtectedRoute>} />
       <Route path="/admin/classes" element={<ProtectedRoute adminOnly><Classes /></ProtectedRoute>} />
       <Route path="/admin/users" element={<ProtectedRoute adminOnly><Users /></ProtectedRoute>} />

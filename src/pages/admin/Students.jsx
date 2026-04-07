@@ -5,14 +5,29 @@ import Papa from 'papaparse'
 import { useNavigate } from 'react-router-dom'
 
 export default function Students() {
+  const ACADEMIC_YEAR = '2026-2027'
   const navigate = useNavigate()
   const [students, setStudents] = useState([])
   const [loading, setLoading] = useState(true)
   const [importing, setImporting] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [savingRow, setSavingRow] = useState(false)
   const [search, setSearch] = useState('')
   const [message, setMessage] = useState(null)
+  const [messageDetailOpen, setMessageDetailOpen] = useState(false)
+  const [confirmReset, setConfirmReset] = useState(null)
+  const [classesMeta, setClassesMeta] = useState([])
+  const [rowEditingId, setRowEditingId] = useState(null)
+  const [rowEditForm, setRowEditForm] = useState({
+    name_eng: '',
+    name_vn: '',
+    class: '',
+    level: 'primary',
+    programme: 'bilingual',
+  })
+  const [studentUsersById, setStudentUsersById] = useState({})
+  const [resetRequestsByStudentId, setResetRequestsByStudentId] = useState({})
   const [filters, setFilters] = useState({
     level: 'all',
     grade: 'all',
@@ -33,6 +48,149 @@ export default function Students() {
     'S0002,Tran Thi B,Bella Tran,7A1,lower_secondary,integrated',
   ].join('\n')
   const studentsCsvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(studentsCsvTemplate)}`
+
+  const getValidAccessToken = async () => {
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError) return null
+
+    const currentToken = sessionData?.session?.access_token
+    if (currentToken) return currentToken
+
+    const { data: refreshedData, error: refreshError } = await supabase.auth.refreshSession()
+    if (refreshError) return null
+    return refreshedData?.session?.access_token || null
+  }
+
+  const chunkArray = (arr, size) => {
+    const chunks = []
+    for (let i = 0; i < arr.length; i += size) {
+      chunks.push(arr.slice(i, i + size))
+    }
+    return chunks
+  }
+
+  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+  const invokeCreateStudentsWithRetry = async (payloadChunk, token, attempt = 1) => {
+    const { data, error } = await supabase.functions.invoke('create-students', {
+      body: { students: payloadChunk },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+      },
+    })
+
+    if (!error) return { data, error: null }
+    if (attempt >= 3) return { data: null, error }
+
+    await wait(250 * attempt)
+    return invokeCreateStudentsWithRetry(payloadChunk, token, attempt + 1)
+  }
+
+  const syncStudentLogins = async (studentRows) => {
+    if (!Array.isArray(studentRows) || studentRows.length === 0) {
+      return { synced: 0, failed: 0, errors: [] }
+    }
+
+    const token = await getValidAccessToken()
+    if (!token) {
+      return { synced: 0, failed: studentRows.length, errors: ['Session expired. Please sign in again as admin.'] }
+    }
+
+    const payload = studentRows.map((s) => ({
+      student_ref_id: s.id,
+      student_id: s.student_id,
+      full_name: s.name_eng,
+      level: s.level,
+    }))
+
+    const chunks = chunkArray(payload, 100)
+    let synced = 0
+    let failed = 0
+    const errors = []
+    let offset = 0
+
+    for (const chunk of chunks) {
+      const { data, error } = await invokeCreateStudentsWithRetry(chunk, token)
+      if (error) {
+        failed += chunk.length
+        errors.push(`rows ${offset + 1}-${offset + chunk.length}: ${error.message}`)
+      } else {
+        synced += (data?.results || []).length
+        failed += (data?.errors || []).length
+        ;(data?.errors || []).forEach((e) => {
+          const localRow = Number(e.row || 0)
+          const absoluteRow = localRow > 0 ? offset + localRow : '?'
+          errors.push(`row ${absoluteRow}: ${e.error}`)
+        })
+      }
+      offset += chunk.length
+    }
+
+    return { synced, failed, errors }
+  }
+
+  const getHomeroom = (classValue) => String(classValue || '').trim().split(/\s+/)[0] || ''
+
+  const syncStudentEnrollments = async (studentRows) => {
+    if (!Array.isArray(studentRows) || studentRows.length === 0) {
+      return { enrolled: 0, missing: 0, missingStudents: [] }
+    }
+
+    const { data: currentYearClasses, error: classError } = await supabase
+      .from('classes')
+      .select('id, name')
+      .eq('academic_year', ACADEMIC_YEAR)
+
+    if (classError) {
+      return { enrolled: 0, missing: studentRows.length, missingStudents: [`Class lookup failed: ${classError.message}`] }
+    }
+
+    const classIds = (currentYearClasses || []).map((c) => c.id)
+    const classesByHomeroom = {}
+    ;(currentYearClasses || []).forEach((cls) => {
+      const homeroom = getHomeroom(cls.name).toLowerCase()
+      if (!homeroom) return
+      if (!classesByHomeroom[homeroom]) classesByHomeroom[homeroom] = []
+      classesByHomeroom[homeroom].push(cls.id)
+    })
+
+    const studentIds = studentRows.map((s) => s.id).filter(Boolean)
+    if (studentIds.length > 0 && classIds.length > 0) {
+      await supabase
+        .from('class_students')
+        .delete()
+        .in('student_id', studentIds)
+        .in('class_id', classIds)
+    }
+
+    const enrollRows = []
+    const missingStudents = []
+    studentRows.forEach((student) => {
+      const homeroom = getHomeroom(student.class).toLowerCase()
+      const targetClassIds = classesByHomeroom[homeroom] || []
+      if (!homeroom || targetClassIds.length === 0) {
+        missingStudents.push(student.student_id || student.id)
+        return
+      }
+      targetClassIds.forEach((classId) => {
+        enrollRows.push({ class_id: classId, student_id: student.id })
+      })
+    })
+
+    if (enrollRows.length > 0) {
+      const { error: enrollError } = await supabase
+        .from('class_students')
+        .upsert(enrollRows, { onConflict: 'class_id,student_id' })
+
+      if (enrollError) {
+        return { enrolled: 0, missing: studentRows.length, missingStudents: [`Enrollment upsert failed: ${enrollError.message}`] }
+      }
+    }
+
+    const enrolledStudents = studentRows.length - missingStudents.length
+    return { enrolled: enrolledStudents, missing: missingStudents.length, missingStudents }
+  }
 
   const capitalizeFirstAlpha = (value) => {
     const v = String(value || '').trim()
@@ -71,11 +229,44 @@ export default function Students() {
 
   const fetchStudents = async () => {
     setLoading(true)
-    const { data } = await supabase
-      .from('students')
-      .select('*')
-      .order('name_eng')
-    setStudents(data || [])
+    const [{ data: studentRows }, { data: userRows }, { data: resetRows }, { data: classRows }] = await Promise.all([
+      supabase
+        .from('students')
+        .select('*')
+        .order('name_eng'),
+      supabase
+        .from('users')
+        .select('id, staff_id, student_id_ref, must_change_password, role')
+        .eq('role', 'student'),
+      supabase
+        .from('password_reset_requests')
+        .select('staff_id')
+        .eq('status', 'new'),
+      supabase
+        .from('classes')
+        .select('name, level, programme')
+        .order('name'),
+    ])
+
+    const userMap = {}
+    ;(userRows || []).forEach((u) => {
+      const byRef = String(u.student_id_ref || '').trim()
+      const byId = String(u.staff_id || '').trim().toLowerCase()
+      if (byRef) userMap[`ref:${byRef}`] = u
+      if (byId) userMap[`sid:${byId}`] = u
+    })
+
+    const resetMap = {}
+    ;(resetRows || []).forEach((r) => {
+      const key = String(r.staff_id || '').trim().toLowerCase()
+      if (!key) return
+      resetMap[key] = (resetMap[key] || 0) + 1
+    })
+
+    setStudents(studentRows || [])
+    setClassesMeta(classRows || [])
+    setStudentUsersById(userMap)
+    setResetRequestsByStudentId(resetMap)
     setLoading(false)
   }
 
@@ -96,14 +287,29 @@ export default function Students() {
           programme: normalizeProgrammeValue(row['Programme'] || row['programme']),
         }))
 
-        const { error } = await supabase
+        const { data: upsertedRows, error } = await supabase
           .from('students')
           .upsert(rows, { onConflict: 'student_id' })
+          .select('id, student_id, name_eng, class, level')
 
         if (error) {
           setMessage({ type: 'error', text: 'Import failed: ' + error.message })
         } else {
-          setMessage({ type: 'success', text: `${rows.length} students imported successfully.` })
+          const enrollmentResult = await syncStudentEnrollments(upsertedRows || [])
+          const syncResult = await syncStudentLogins(upsertedRows || [])
+          const summary = `${rows.length} students imported. Enrolled: ${enrollmentResult.enrolled}, Missing class match: ${enrollmentResult.missing}. Student logins: ${syncResult.synced} synced, ${syncResult.failed} failed.`
+          const detailParts = []
+          if (enrollmentResult.missingStudents.length > 0) {
+            detailParts.push(`No class match for: ${enrollmentResult.missingStudents.join(', ')}`)
+          }
+          if (syncResult.errors.length > 0) {
+            detailParts.push(syncResult.errors.join(' | '))
+          }
+          setMessage({
+            type: syncResult.failed > 0 || enrollmentResult.missing > 0 ? 'error' : 'success',
+            text: summary,
+            detail: detailParts.length > 0 ? detailParts.join(' | ') : null,
+          })
           fetchStudents()
         }
         setImporting(false)
@@ -119,7 +325,7 @@ export default function Students() {
     }
 
     setSaving(true)
-    const { error } = await supabase
+    const { data: upsertedRows, error } = await supabase
       .from('students')
       .upsert(
         [{
@@ -132,6 +338,7 @@ export default function Students() {
         }],
         { onConflict: 'student_id' }
       )
+      .select('id, student_id, name_eng, class, level')
 
     if (error) {
       setMessage({ type: 'error', text: error.message })
@@ -139,7 +346,23 @@ export default function Students() {
       return
     }
 
-    setMessage({ type: 'success', text: 'Student saved successfully.' })
+    const enrollmentResult = await syncStudentEnrollments(upsertedRows || [])
+    const syncResult = await syncStudentLogins(upsertedRows || [])
+    if (syncResult.failed > 0) {
+      setMessage({
+        type: 'error',
+        text: `Student saved, but login sync failed (${syncResult.failed}).`,
+        detail: syncResult.errors.join(' | '),
+      })
+    } else if (enrollmentResult.missing > 0) {
+      setMessage({
+        type: 'error',
+        text: 'Student saved and login created, but no class match was found for enrollment.',
+        detail: `No class match for: ${enrollmentResult.missingStudents.join(', ')}`,
+      })
+    } else {
+      setMessage({ type: 'success', text: 'Student saved successfully and login account is ready (default password: royal@123).' })
+    }
     setNewStudent({
       student_id: '',
       name_vn: '',
@@ -150,6 +373,138 @@ export default function Students() {
     })
     setShowForm(false)
     setSaving(false)
+    fetchStudents()
+  }
+
+  const getStudentUser = (student) => {
+    const byRef = studentUsersById[`ref:${String(student.id || '').trim()}`]
+    if (byRef) return byRef
+    const byStudentId = studentUsersById[`sid:${String(student.student_id || '').trim().toLowerCase()}`]
+    return byStudentId || null
+  }
+
+  const resetStudentPassword = async (student) => {
+    const targetUser = getStudentUser(student)
+    if (!targetUser?.id) {
+      setMessage({ type: 'error', text: 'No student login account found for this student.' })
+      return
+    }
+
+    const token = await getValidAccessToken()
+    if (!token) {
+      setMessage({ type: 'error', text: 'Your session expired. Please sign out and sign in again as admin.' })
+      return
+    }
+
+    const { error } = await supabase.functions.invoke('reset-user-password', {
+      body: { user_id: targetUser.id },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+      },
+    })
+
+    if (error) {
+      setMessage({ type: 'error', text: `Password reset failed for ${student.student_id}: ${error.message}` })
+      return
+    }
+
+    await supabase
+      .from('password_reset_requests')
+      .update({ status: 'resolved', resolved_at: new Date().toISOString() })
+      .eq('status', 'new')
+      .ilike('staff_id', student.student_id)
+
+    setMessage({ type: 'success', text: `Password reset for ${student.student_id}. Default password is royal@123.` })
+    setConfirmReset(null)
+    fetchStudents()
+  }
+
+  const inferClassFields = (classValue) => {
+    const homeroom = String(classValue || '').trim().split(/\s+/)[0] || ''
+    if (!homeroom) return null
+
+    const matches = classesMeta.filter((cls) => {
+      const clsHomeroom = String(cls.name || '').trim().split(/\s+/)[0] || ''
+      return clsHomeroom.toLowerCase() === homeroom.toLowerCase()
+    })
+
+    if (matches.length === 0) return null
+
+    const programmes = Array.from(new Set(matches.map(m => m.programme).filter(Boolean)))
+    const levels = Array.from(new Set(matches.map(m => m.level).filter(Boolean)))
+
+    return {
+      programme: programmes.length === 1 ? programmes[0] : null,
+      level: levels.length === 1 ? levels[0] : null,
+    }
+  }
+
+  const startRowEdit = (student) => {
+    setRowEditingId(student.id)
+    setRowEditForm({
+      name_eng: student.name_eng || '',
+      name_vn: student.name_vn || '',
+      class: student.class || '',
+      level: student.level || 'primary',
+      programme: student.programme || 'bilingual',
+    })
+  }
+
+  const cancelRowEdit = () => {
+    setRowEditingId(null)
+    setRowEditForm({
+      name_eng: '',
+      name_vn: '',
+      class: '',
+      level: 'primary',
+      programme: 'bilingual',
+    })
+  }
+
+  const updateRowEditField = (field, value) => {
+    if (field !== 'class') {
+      setRowEditForm((prev) => ({ ...prev, [field]: value }))
+      return
+    }
+
+    const inferred = inferClassFields(value)
+    setRowEditForm((prev) => ({
+      ...prev,
+      class: value,
+      programme: inferred?.programme || prev.programme,
+      level: inferred?.level || prev.level,
+    }))
+  }
+
+  const saveRowEdit = async (studentId) => {
+    if (!rowEditForm.name_eng?.trim() || !rowEditForm.class?.trim()) {
+      setMessage({ type: 'error', text: 'English Name and Class are required.' })
+      return
+    }
+
+    setSavingRow(true)
+    const { error } = await supabase
+      .from('students')
+      .update({
+        name_eng: rowEditForm.name_eng.trim(),
+        name_vn: rowEditForm.name_vn.trim() || null,
+        class: rowEditForm.class.trim(),
+        level: rowEditForm.level,
+        programme: rowEditForm.programme,
+      })
+      .eq('id', studentId)
+
+    if (error) {
+      setMessage({ type: 'error', text: `Could not save student: ${error.message}` })
+      setSavingRow(false)
+      return
+    }
+
+    setMessage({ type: 'success', text: 'Student updated successfully.' })
+    setSavingRow(false)
+    await syncStudentEnrollments([{ id: studentId, class: rowEditForm.class, student_id: students.find(s => s.id === studentId)?.student_id || studentId }])
+    cancelRowEdit()
     fetchStudents()
   }
 
@@ -265,8 +620,58 @@ export default function Students() {
             ? 'bg-green-50 text-green-700 border border-green-200'
             : 'bg-red-50 text-red-700 border border-red-200'
         }`}>
-          {message.text}
+          <span>{message.text}</span>
+          {message.detail && (
+            <button
+              onClick={() => setMessageDetailOpen(true)}
+              className="ml-3 underline underline-offset-2"
+            >
+              Click for more
+            </button>
+          )}
           <button onClick={() => setMessage(null)} className="ml-4 opacity-50 hover:opacity-100">✕</button>
+        </div>
+      )}
+
+      {messageDetailOpen && message?.detail && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4">
+          <div className="w-full max-w-2xl bg-white rounded-xl border border-gray-200 p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-base font-semibold text-gray-900">Detailed Status</h4>
+              <button
+                type="button"
+                onClick={() => setMessageDetailOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="text-sm text-gray-700 whitespace-pre-wrap break-words max-h-[50vh] overflow-auto">
+              {message.detail}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmReset && (
+        <div className="mb-6 px-4 py-4 rounded-lg bg-red-50 border border-red-200">
+          <p className="text-sm font-medium text-red-700 mb-3">
+            Reset password for <strong>{confirmReset.name_eng || confirmReset.student_id}</strong>? Their password will be set to <strong>royal@123</strong> and they will be required to change it on next login.
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => resetStudentPassword(confirmReset)}
+              className="px-4 py-1.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700"
+            >
+              Yes, reset password
+            </button>
+            <button
+              onClick={() => setConfirmReset(null)}
+              className="px-4 py-1.5 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 
@@ -485,27 +890,156 @@ export default function Students() {
                 <th className="text-left px-6 py-3 text-gray-500 font-medium">Class</th>
                 <th className="text-left px-6 py-3 text-gray-500 font-medium">Level</th>
                 <th className="text-left px-6 py-3 text-gray-500 font-medium">Programme</th>
+                <th className="text-left px-6 py-3 text-gray-500 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filtered.map(student => (
+              {filtered.map(student => {
+                const linkedUser = getStudentUser(student)
+                const mustChangePassword = !!linkedUser?.must_change_password
+                const resetRequested = (resetRequestsByStudentId[String(student.student_id || '').trim().toLowerCase()] || 0) > 0
+                const isRowEditing = rowEditingId === student.id
+                return (
                 <tr key={student.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-3 text-gray-600">{student.student_id}</td>
-                  <td className="px-6 py-3 font-medium text-gray-900">{student.name_eng}</td>
-                  <td className="px-6 py-3 text-gray-600">{student.name_vn}</td>
-                  <td className="px-6 py-3 text-gray-600">{student.class}</td>
-                  <td className="px-6 py-3">
-                    <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
-                      {levelLabel(student.level)}
+                  <td className="px-6 py-3 text-gray-600">
+                    <span className="inline-flex items-center gap-2">
+                      <span
+                        className={`inline-block w-2 h-2 rounded-full ${
+                          !linkedUser ? 'bg-gray-300' : mustChangePassword ? 'bg-red-500' : 'bg-green-500'
+                        }`}
+                        title={
+                          !linkedUser
+                            ? 'Login not created yet'
+                            : mustChangePassword
+                              ? 'Pending activation'
+                              : 'Activated'
+                        }
+                      />
+                      <span>{student.student_id}</span>
                     </span>
                   </td>
-                  <td className="px-6 py-3">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${programmeBadgeStyle(student.programme)}`}>
-                      {titleCaseWords(student.programme)}
+                  <td className="px-6 py-3 font-medium text-gray-900">
+                    <span className="inline-flex items-center gap-2">
+                      {isRowEditing ? (
+                        <input
+                          type="text"
+                          value={rowEditForm.name_eng}
+                          onChange={e => updateRowEditField('name_eng', e.target.value)}
+                          className="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-44"
+                        />
+                      ) : (
+                        <span>{student.name_eng}</span>
+                      )}
+                      {resetRequested && (
+                        <span
+                          className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium"
+                          style={{ backgroundColor: '#FDEBEC', color: '#d1232a' }}
+                        >
+                          Reset Requested
+                        </span>
+                      )}
                     </span>
+                  </td>
+                  <td className="px-6 py-3 text-gray-600">
+                    {isRowEditing ? (
+                      <input
+                        type="text"
+                        value={rowEditForm.name_vn}
+                        onChange={e => updateRowEditField('name_vn', e.target.value)}
+                        className="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-44"
+                      />
+                    ) : (
+                      student.name_vn
+                    )}
+                  </td>
+                  <td className="px-6 py-3 text-gray-600">
+                    {isRowEditing ? (
+                      <input
+                        type="text"
+                        value={rowEditForm.class}
+                        onChange={e => updateRowEditField('class', e.target.value)}
+                        className="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-24"
+                      />
+                    ) : (
+                      student.class
+                    )}
+                  </td>
+                  <td className="px-6 py-3">
+                    {isRowEditing ? (
+                      <select
+                        value={rowEditForm.level}
+                        onChange={e => updateRowEditField('level', e.target.value)}
+                        className="border border-gray-300 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="primary">Primary</option>
+                        <option value="lower_secondary">Lower Secondary</option>
+                        <option value="upper_secondary">Upper Secondary</option>
+                        <option value="high_school">High School</option>
+                      </select>
+                    ) : (
+                      <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
+                        {levelLabel(student.level)}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-6 py-3">
+                    {isRowEditing ? (
+                      <select
+                        value={rowEditForm.programme}
+                        onChange={e => updateRowEditField('programme', e.target.value)}
+                        className="border border-gray-300 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="bilingual">Bilingual</option>
+                        <option value="integrated">Integrated</option>
+                      </select>
+                    ) : (
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${programmeBadgeStyle(student.programme)}`}>
+                        {titleCaseWords(student.programme)}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-6 py-3">
+                    {isRowEditing ? (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => saveRowEdit(student.id)}
+                          disabled={savingRow}
+                          className="px-3 py-1 text-white rounded-lg text-xs font-medium bg-green-600 hover:bg-green-700 disabled:bg-gray-300"
+                        >
+                          {savingRow ? 'Saving...' : 'Save'}
+                        </button>
+                        <button
+                          onClick={cancelRowEdit}
+                          className="px-3 py-1 border border-gray-300 text-gray-600 rounded-lg text-xs hover:bg-gray-50"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => startRowEdit(student)}
+                          className="px-3 py-1 border rounded-lg text-xs font-medium text-white"
+                          style={{ backgroundColor: '#1f86c7', borderColor: '#1f86c7' }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => setConfirmReset(student)}
+                          disabled={!linkedUser}
+                          className={`px-3 py-1 border rounded-lg text-xs ${
+                            resetRequested
+                              ? 'border-red-300 text-red-700 bg-red-50 hover:bg-red-100'
+                              : 'border-amber-300 text-amber-700 hover:bg-amber-50'
+                          } disabled:opacity-40 disabled:cursor-not-allowed`}
+                        >
+                          Reset Password
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         )}

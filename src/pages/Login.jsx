@@ -33,7 +33,7 @@ export default function Login() {
   const handleForgotPassword = async () => {
     const normalizedStaffId = String(staffId || '').trim()
     if (!normalizedStaffId) {
-      setError('Please enter your Staff ID first.')
+      setError(mode === 'student' ? 'Please enter your Student ID first.' : 'Please enter your Staff ID first.')
       setResetMessage(null)
       return
     }
@@ -80,15 +80,17 @@ export default function Login() {
             <h1 className="text-2xl font-bold text-gray-900 mb-1">Cambridge Programme Portal</h1>
             <p className="text-gray-400 text-sm mb-8">
               {mode === 'teacher'
-                ? 'Sign in using your Royal Staff ID. You will be prompted to change your password after first logging in.'
-                : 'Click the button below to login using your Royal credentials.'}
+                ? 'Login using your Staff ID. You will need to reset your password upon first login.'
+                : mode === 'student'
+                  ? 'Login using your Student ID. You will need to reset your password upon first login.'
+                  : 'Click the button below to login.'}
             </p>
 
-            {mode === 'teacher' ? (
+            {mode === 'teacher' || mode === 'student' ? (
               <form onSubmit={handleStaffLogin} className="space-y-3 text-left">
                 <input
                   type="text"
-                  placeholder="Staff ID"
+                  placeholder={mode === 'student' ? 'Student ID' : 'Staff ID'}
                   value={staffId}
                   onChange={e => setStaffId(e.target.value)}
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -135,15 +137,29 @@ export default function Login() {
               </button>
             )}
 
-            <button
-              onClick={() => {
-                setMode(prev => prev === 'teacher' ? 'admin' : 'teacher')
-                setError('')
-              }}
-              className="mt-4 text-xs text-gray-500 hover:text-gray-700 underline"
-            >
-              {mode === 'teacher' ? 'Admin Login' : 'Back to Teacher Login'}
-            </button>
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <button
+                onClick={() => { setMode('teacher'); setError(''); setResetMessage(null) }}
+                className="rounded-lg px-3 py-2 text-xs font-semibold text-white transition-colors"
+                style={{ backgroundColor: mode === 'teacher' ? '#166a9b' : '#1f86c7' }}
+              >
+                Teacher Portal
+              </button>
+              <button
+                onClick={() => { setMode('student'); setError(''); setResetMessage(null) }}
+                className="rounded-lg px-3 py-2 text-xs font-semibold transition-colors"
+                style={{ backgroundColor: mode === 'student' ? '#e6b10f' : '#ffc612', color: '#1a1a1a' }}
+              >
+                Student Portal
+              </button>
+              <button
+                onClick={() => { setMode('admin'); setError(''); setResetMessage(null) }}
+                className="rounded-lg px-3 py-2 text-xs font-semibold text-white transition-colors"
+                style={{ backgroundColor: mode === 'admin' ? '#b61d24' : '#d1232a' }}
+              >
+                Admin Portal
+              </button>
+            </div>
           </div>
 
           {/* Blue bottom bar */}
