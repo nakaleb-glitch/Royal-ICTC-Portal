@@ -8,6 +8,16 @@ export const AuthProvider = ({ children }) => {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
 
+  const fetchProfile = async (userId) => {
+    const { data } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single()
+    setProfile(data)
+    setLoading(false)
+  }
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
@@ -33,18 +43,6 @@ export const AuthProvider = ({ children }) => {
     return () => subscription.unsubscribe()
   }, [])
 
-  const fetchProfile = async (userId) => {
-    console.log('Fetching profile for:', userId)
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single()
-    console.log('Profile result:', data, error)
-    setProfile(data)
-    setLoading(false)
-  }
-
   const signInWithGoogle = async () => {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -54,12 +52,35 @@ export const AuthProvider = ({ children }) => {
     })
   }
 
+  const signInWithStaffId = async (staffId, password) => {
+    const normalized = String(staffId || '').trim()
+    if (!normalized || !password) {
+      return { error: new Error('Staff ID and password are required.') }
+    }
+
+    const { data: userRow, error: lookupError } = await supabase
+      .from('users')
+      .select('email')
+      .ilike('staff_id', normalized)
+      .limit(1)
+      .maybeSingle()
+
+    if (lookupError) return { error: lookupError }
+    if (!userRow?.email) return { error: new Error('Staff ID not found.') }
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: userRow.email,
+      password,
+    })
+    return { error }
+  }
+
   const signOut = async () => {
     await supabase.auth.signOut()
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ user, profile, loading, signInWithGoogle, signInWithStaffId, signOut }}>
       {children}
     </AuthContext.Provider>
   )

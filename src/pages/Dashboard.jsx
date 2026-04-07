@@ -220,36 +220,32 @@ export default function Dashboard() {
                 className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block"
                 style={{ borderTopColor: CARD_ACCENT.students, borderTopWidth: 3 }}
               >
-                <div className="text-2xl mb-2">👥</div>
-                <div className="font-semibold text-gray-900">Students</div>
-                <div className="text-sm text-gray-500 mt-1">Import and manage students</div>
+                <div className="font-semibold text-gray-900">Student Management</div>
+                <div className="text-sm text-gray-500 mt-1">Add, edit or remove students.</div>
               </Link>
               <Link
                 to="/admin/classes"
                 className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block"
                 style={{ borderTopColor: CARD_ACCENT.classes, borderTopWidth: 3 }}
               >
-                <div className="text-2xl mb-2">🏫</div>
-                <div className="font-semibold text-gray-900">Classes</div>
-                <div className="text-sm text-gray-500 mt-1">Create and assign classes</div>
+                <div className="font-semibold text-gray-900">Class Management</div>
+                <div className="text-sm text-gray-500 mt-1">Add, edit or remove classes.</div>
               </Link>
               <Link
                 to="/admin/users"
                 className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block"
                 style={{ borderTopColor: CARD_ACCENT.users, borderTopWidth: 3 }}
               >
-                <div className="text-2xl mb-2">👤</div>
-                <div className="font-semibold text-gray-900">Users</div>
-                <div className="text-sm text-gray-500 mt-1">Manage teacher accounts</div>
+                <div className="font-semibold text-gray-900">User Management</div>
+                <div className="text-sm text-gray-500 mt-1">Add, edit or remove accounts.</div>
               </Link>
               <Link
                 to="/admin/resources"
                 className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block"
                 style={{ borderTopColor: CARD_ACCENT.resources, borderTopWidth: 3 }}
               >
-                <div className="text-2xl mb-2">📚</div>
-                <div className="font-semibold text-gray-900">Resources</div>
-                <div className="text-sm text-gray-500 mt-1">Add and manage teaching resources</div>
+                <div className="font-semibold text-gray-900">Resource Management</div>
+                <div className="text-sm text-gray-500 mt-1">Add, edit or remove resources.</div>
               </Link>
             </div>
           </div>

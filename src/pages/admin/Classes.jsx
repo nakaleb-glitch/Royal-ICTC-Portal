@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import Layout from '../../components/Layout'
 import { Link } from 'react-router-dom'
+import Papa from 'papaparse'
 
 const SUBJECTS = ['ESL', 'Mathematics', 'Science', 'Global Perspectives']
 const ACADEMIC_YEAR = '2026–27'
@@ -27,6 +28,7 @@ export default function Classes() {
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({})
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const [importing, setImporting] = useState(false)
   const [filters, setFilters] = useState({
     homeroom: 'all',
     grade: 'all',
@@ -34,6 +36,13 @@ export default function Classes() {
     programme: 'all',
     subject: 'all',
   })
+  const classCsvTemplate = [
+    'Class Name,Level,Programme,Subject,Teacher Email',
+    '2B2 ESL,primary,bilingual,ESL,teacher1@royal.edu.vn',
+    '2B2 Mathematics,primary,bilingual,Mathematics,teacher2@royal.edu.vn',
+    '7A1 Science,secondary,integrated,Science,teacher3@royal.edu.vn',
+  ].join('\n')
+  const classCsvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(classCsvTemplate)}`
 
   useEffect(() => {
     fetchClasses()
@@ -174,6 +183,123 @@ export default function Classes() {
     }
   }
 
+  const handleClassCSV = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImporting(true)
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        try {
+          const rawRows = results.data || []
+
+          const rows = rawRows
+            .map((row) => ({
+              name: (row['Class Name'] || row['name'] || '').trim(),
+              level: (row['Level'] || row['level'] || '').trim().toLowerCase(),
+              programme: (row['Programme'] || row['programme'] || '').trim().toLowerCase(),
+              subject: (row['Subject'] || row['subject'] || '').trim(),
+              teacher_email: (row['Teacher Email'] || row['teacher_email'] || '').trim().toLowerCase(),
+            }))
+            .filter((r) => r.name && r.level && r.programme && r.subject)
+
+          if (rows.length === 0) {
+            setMessage({ type: 'error', text: 'No valid rows found. Please check your CSV format.' })
+            return
+          }
+
+          const [{ data: studentsData }, { data: teachersData }, { data: existingClassesData }] = await Promise.all([
+            supabase.from('students').select('id, class'),
+            supabase.from('users').select('id, email').eq('role', 'teacher'),
+            supabase.from('classes').select('id, name, subject, academic_year').eq('academic_year', '2026-27'),
+          ])
+
+          const studentsByHomeroom = {}
+          ;(studentsData || []).forEach((s) => {
+            const key = (s.class || '').trim()
+            if (!key) return
+            if (!studentsByHomeroom[key]) studentsByHomeroom[key] = []
+            studentsByHomeroom[key].push(s.id)
+          })
+
+          const teachersByEmail = {}
+          ;(teachersData || []).forEach((t) => {
+            if (t.email) teachersByEmail[t.email.toLowerCase()] = t.id
+          })
+
+          const existingByKey = {}
+          ;(existingClassesData || []).forEach((c) => {
+            const key = `${c.name}__${c.subject}__${c.academic_year}`
+            existingByKey[key] = c.id
+          })
+
+          let createdCount = 0
+          let reusedCount = 0
+          let enrolledCount = 0
+          let failedCount = 0
+
+          for (const row of rows) {
+            const classKey = `${row.name}__${row.subject}__2026-27`
+            let classId = existingByKey[classKey]
+
+            if (!classId) {
+              const teacherId = row.teacher_email ? teachersByEmail[row.teacher_email] || null : null
+              const { data: newClass, error: classError } = await supabase
+                .from('classes')
+                .insert({
+                  name: row.name,
+                  subject: row.subject,
+                  level: row.level,
+                  programme: row.programme,
+                  teacher_id: teacherId,
+                  academic_year: '2026-27',
+                })
+                .select('id')
+                .single()
+
+              if (classError || !newClass?.id) {
+                failedCount += 1
+                continue
+              }
+
+              classId = newClass.id
+              existingByKey[classKey] = classId
+              createdCount += 1
+            } else {
+              reusedCount += 1
+            }
+
+            const homeroom = row.name.split(' ')[0]
+            const studentIds = studentsByHomeroom[homeroom] || []
+            if (studentIds.length > 0) {
+              const enrollRows = studentIds.map((studentId) => ({ class_id: classId, student_id: studentId }))
+              const { error: enrollError } = await supabase
+                .from('class_students')
+                .upsert(enrollRows, { onConflict: 'class_id,student_id' })
+              if (!enrollError) enrolledCount += studentIds.length
+            }
+          }
+
+          setMessage({
+            type: failedCount > 0 ? 'error' : 'success',
+            text: `Import complete: ${createdCount} created, ${reusedCount} existing reused, ${enrolledCount} enrolments added${failedCount > 0 ? `, ${failedCount} failed` : ''}.`,
+          })
+          fetchClasses()
+        } finally {
+          setImporting(false)
+          e.target.value = ''
+        }
+      },
+      error: () => {
+        setImporting(false)
+        setMessage({ type: 'error', text: 'Could not parse CSV file.' })
+        e.target.value = ''
+      },
+    })
+  }
+
   const getHomeroom = (name) => {
     if (!name) return null
     return String(name).trim().split(/\s+/)[0] || null
@@ -283,15 +409,37 @@ export default function Classes() {
     <Layout>
       <div className="mb-8 flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Classes</h2>
-          <p className="text-gray-500 text-sm mt-1">{classes.length} classes · 2026–27</p>
+          <h2 className="text-2xl font-bold text-gray-900">Class Management</h2>
+          <p className="text-gray-500 text-sm mt-1">View, add, edit or remove classes for school year 2026–27</p>
         </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-        >
-          {showForm ? 'Cancel' : '+ New Class'}
-        </button>
+        <div className="flex items-start gap-3">
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+          >
+            {showForm ? 'Cancel' : '+ New Class'}
+          </button>
+          <div className="flex flex-col items-end">
+            <label
+              className={`cursor-pointer px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                importing ? 'bg-gray-300 text-gray-600' : ''
+              }`}
+              style={importing ? {} : { backgroundColor: '#ffc612', color: '#1a1a1a' }}
+              onMouseOver={e => { if (!importing) e.currentTarget.style.backgroundColor = '#e6b10f' }}
+              onMouseOut={e => { if (!importing) e.currentTarget.style.backgroundColor = '#ffc612' }}
+            >
+              {importing ? 'Importing...' : '+ Import Classes CSV'}
+              <input type="file" accept=".csv" className="hidden" onChange={handleClassCSV} disabled={importing} />
+            </label>
+            <a
+              href={classCsvTemplateHref}
+              download="classes_import_template.csv"
+              className="mt-1 text-xs text-blue-600 hover:text-blue-800 hover:underline"
+            >
+              Download CSV Template
+            </a>
+          </div>
+        </div>
       </div>
 
       {message && (
@@ -664,6 +812,13 @@ export default function Classes() {
             </tbody>
           </table>
         )}
+      </div>
+
+      <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+        <p className="text-xs text-gray-500 font-medium mb-2">Class CSV Format — include these column headers:</p>
+        <code className="text-xs text-gray-600">Class Name, Level, Programme, Subject, Teacher Email</code>
+        <p className="text-xs text-gray-400 mt-2">Teacher Email is optional. If not found, class is created as unassigned.</p>
+        <p className="text-xs text-gray-400">Auto-enrolment uses homeroom from the first token of Class Name (e.g. 2B2 in "2B2 ESL").</p>
       </div>
     </Layout>
   )

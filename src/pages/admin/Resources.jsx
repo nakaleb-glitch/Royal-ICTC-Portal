@@ -18,7 +18,16 @@ export default function Resources() {
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({})
   const [showAddForm, setShowAddForm] = useState(false)
-  const [newForm, setNewForm] = useState({ title: '', description: '', url: '', resource_type: 'other', sort_order: 99 })
+  const [newForm, setNewForm] = useState({
+    title: '',
+    description: '',
+    url: '',
+    resource_type: 'other',
+    sort_order: 99,
+    level: '',
+    programme: '',
+    subject: '',
+  })
   const [message, setMessage] = useState(null)
 
   useEffect(() => { fetchResources() }, [])
@@ -64,12 +73,15 @@ export default function Resources() {
   }
 
   const addResource = async () => {
-    if (!newForm.title) return
+    if (!newForm.title || !newForm.level || !newForm.programme || !newForm.subject) {
+      setMessage({ type: 'error', text: 'Please complete title, level, programme, and subject.' })
+      return
+    }
     const { error } = await supabase.from('resource_links').insert({
       ...newForm,
-      level: filter.level,
-      programme: filter.programme,
-      subject: filter.subject,
+      level: newForm.level,
+      programme: newForm.programme,
+      subject: newForm.subject,
       url: newForm.url || null,
       description: newForm.description || null,
     })
@@ -78,7 +90,7 @@ export default function Resources() {
     } else {
       setMessage({ type: 'success', text: 'Resource added.' })
       setShowAddForm(false)
-      setNewForm({ title: '', description: '', url: '', resource_type: 'other', sort_order: 99 })
+      setNewForm({ title: '', description: '', url: '', resource_type: 'other', sort_order: 99, level: '', programme: '', subject: '' })
       fetchResources()
     }
   }
@@ -93,18 +105,15 @@ export default function Resources() {
     </button>
   )
 
-  const canAdd = filter.level !== null && filter.programme !== null && filter.subject !== null
-
   return (
     <Layout>
       <div className="mb-8 flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Teacher Resources</h2>
-          <p className="text-gray-500 text-sm mt-1">Manage resource links by level, programme and subject. Changes apply to all matching classes.</p>
+          <h2 className="text-2xl font-bold text-gray-900">Resource Management</h2>
+          <p className="text-gray-500 text-sm mt-1">Add, edit or remove teacher resources.</p>
         </div>
-        <button onClick={() => setShowAddForm(!showAddForm)} disabled={!canAdd}
-          className={`px-4 py-2 rounded-lg text-sm font-medium text-white ${canAdd ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300 cursor-not-allowed'}`}
-          title={!canAdd ? 'Select a specific level, programme and subject to add a resource' : ''}>
+        <button onClick={() => setShowAddForm(!showAddForm)}
+          className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
           {showAddForm ? 'Cancel' : '+ Add Resource'}
         </button>
       </div>
@@ -119,24 +128,61 @@ export default function Resources() {
       )}
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-6">
+      <div className="flex flex-wrap lg:flex-nowrap gap-3 mb-6 lg:overflow-x-auto">
         {filterBtn(filter.level === null, () => setFilter(f => ({ ...f, level: null })), 'All Levels', '#6b7280')}
         {LEVELS.map(l => filterBtn(filter.level === l, () => setFilter(f => ({ ...f, level: l })), LEVEL_LABEL[l], '#d1232a'))}
-        <div className="w-px bg-gray-200 mx-1" />
+        <div className="w-px bg-gray-400 mx-1" />
         {filterBtn(filter.programme === null, () => setFilter(f => ({ ...f, programme: null })), 'All Programmes', '#6b7280')}
         {PROGRAMMES.map(p => filterBtn(filter.programme === p, () => setFilter(f => ({ ...f, programme: p })), PROGRAMME_LABEL[p], '#1f86c7'))}
-        <div className="w-px bg-gray-200 mx-1" />
+        <div className="w-px bg-gray-400 mx-1" />
         {filterBtn(filter.subject === null, () => setFilter(f => ({ ...f, subject: null })), 'All Subjects', '#6b7280')}
         {SUBJECTS.map(s => filterBtn(filter.subject === s, () => setFilter(f => ({ ...f, subject: s })), s, '#ffc612', true))}
       </div>
 
-      {/* Add form — only when specific level/programme/subject selected */}
-      {showAddForm && canAdd && (
+      {/* Add form */}
+      {showAddForm && (
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 mb-6">
-          <h3 className="font-semibold text-gray-900 mb-4">
-            Add Resource — {LEVEL_LABEL[filter.level]} · {PROGRAMME_LABEL[filter.programme]} · {filter.subject}
-          </h3>
+          <h3 className="font-semibold text-gray-900 mb-4">Add Resource</h3>
           <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-medium text-gray-500 block mb-1">Level</label>
+              <select
+                value={newForm.level}
+                onChange={e => setNewForm({ ...newForm, level: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select level</option>
+                {LEVELS.map(l => (
+                  <option key={l} value={l}>{LEVEL_LABEL[l]}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-500 block mb-1">Programme</label>
+              <select
+                value={newForm.programme}
+                onChange={e => setNewForm({ ...newForm, programme: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select programme</option>
+                {PROGRAMMES.map(p => (
+                  <option key={p} value={p}>{PROGRAMME_LABEL[p]}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-500 block mb-1">Subject</label>
+              <select
+                value={newForm.subject}
+                onChange={e => setNewForm({ ...newForm, subject: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select subject</option>
+                {SUBJECTS.map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
             <div>
               <label className="text-xs font-medium text-gray-500 block mb-1">Title</label>
               <input type="text" placeholder="e.g. Study Map" value={newForm.title}

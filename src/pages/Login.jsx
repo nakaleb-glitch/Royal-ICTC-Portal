@@ -1,14 +1,30 @@
 import { useAuth } from '../contexts/AuthContext'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 export default function Login() {
-  const { user, signInWithGoogle } = useAuth()
+  const { user, signInWithGoogle, signInWithStaffId } = useAuth()
   const navigate = useNavigate()
+  const [mode, setMode] = useState('teacher')
+  const [staffId, setStaffId] = useState('')
+  const [password, setPassword] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     if (user) navigate('/dashboard')
-  }, [user])
+  }, [user, navigate])
+
+  const handleStaffLogin = async (e) => {
+    e.preventDefault()
+    setSubmitting(true)
+    setError('')
+    const { error: signInError } = await signInWithStaffId(staffId, password)
+    if (signInError) {
+      setError(signInError.message || 'Could not sign in. Please check credentials.')
+    }
+    setSubmitting(false)
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: '#1a1a1a' }}>
@@ -26,14 +42,58 @@ export default function Login() {
 
           <div className="p-10 text-center">
             <h1 className="text-2xl font-bold text-gray-900 mb-1">Gradebook Portal</h1>
-            <p className="text-gray-400 text-sm mb-8">Sign in with your school Google account to continue</p>
+            <p className="text-gray-400 text-sm mb-8">
+              {mode === 'teacher'
+                ? 'Teachers: sign in with Staff ID and password.'
+                : 'Admins: sign in with your Google account.'}
+            </p>
+
+            {mode === 'teacher' ? (
+              <form onSubmit={handleStaffLogin} className="space-y-3 text-left">
+                <input
+                  type="text"
+                  placeholder="Staff ID"
+                  value={staffId}
+                  onChange={e => setStaffId(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {error && (
+                  <p className="text-xs text-red-600">{error}</p>
+                )}
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full rounded-xl px-6 py-3 text-white font-medium transition-colors disabled:bg-gray-300"
+                  style={{ backgroundColor: '#1f86c7' }}
+                >
+                  {submitting ? 'Signing in...' : 'Sign In'}
+                </button>
+              </form>
+            ) : (
+              <button
+                onClick={signInWithGoogle}
+                className="w-full flex items-center justify-center gap-3 border border-gray-200 rounded-xl px-6 py-3 text-gray-700 font-medium hover:bg-gray-50 transition-colors shadow-sm"
+              >
+                <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
+                Continue with Google
+              </button>
+            )}
 
             <button
-              onClick={signInWithGoogle}
-              className="w-full flex items-center justify-center gap-3 border border-gray-200 rounded-xl px-6 py-3 text-gray-700 font-medium hover:bg-gray-50 transition-colors shadow-sm"
+              onClick={() => {
+                setMode(prev => prev === 'teacher' ? 'admin' : 'teacher')
+                setError('')
+              }}
+              className="mt-4 text-xs text-gray-500 hover:text-gray-700 underline"
             >
-              <img src="https://www.google.com/favicon.ico" className="w-5 h-5" />
-              Continue with Google
+              {mode === 'teacher' ? 'Admin Login' : 'Back to Teacher Login'}
             </button>
           </div>
 

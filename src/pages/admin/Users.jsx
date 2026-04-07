@@ -15,6 +15,7 @@ const levelLabel = (l) => ({
 export default function Users() {
   const { user: currentUser } = useAuth()
   const [users, setUsers] = useState([])
+  const [classesByTeacher, setClassesByTeacher] = useState({})
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
   const [editForms, setEditForms] = useState({})
@@ -25,16 +26,41 @@ export default function Users() {
   const [rowEditingId, setRowEditingId] = useState(null)
   const [rowEditForm, setRowEditForm] = useState({
     full_name: '',
+    staff_id: '',
     role: 'teacher',
     level: '',
     subject: '',
   })
+  const usersCsvTemplate = [
+    'Full Name,Staff ID,Email,Role,Level,Subject',
+    'Teacher One,T001,teacher1@royal.edu.vn,teacher,primary,ESL/GP',
+    'Teacher Two,T002,teacher2@royal.edu.vn,teacher,secondary,Mathematics',
+    'Teacher Three,T003,teacher3@royal.edu.vn,admin,secondary,Science',
+  ].join('\n')
+  const usersCsvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(usersCsvTemplate)}`
 
   useEffect(() => { fetchUsers() }, [])
 
   const fetchUsers = async () => {
     setLoading(true)
-    const { data } = await supabase.from('users').select('*').order('full_name')
+    const [{ data: usersData }, { data: classesData }] = await Promise.all([
+      supabase.from('users').select('*').order('full_name'),
+      supabase.from('classes').select('id, name, subject, teacher_id').order('name'),
+    ])
+
+    const classMap = {}
+    ;(classesData || []).forEach((cls) => {
+      if (!cls.teacher_id) return
+      if (!classMap[cls.teacher_id]) classMap[cls.teacher_id] = []
+      classMap[cls.teacher_id].push(`${cls.name} · ${cls.subject}`)
+    })
+
+    Object.keys(classMap).forEach((teacherId) => {
+      classMap[teacherId].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+    })
+
+    setClassesByTeacher(classMap)
+    const data = usersData
     setUsers(data || [])
     setLoading(false)
   }
@@ -44,6 +70,7 @@ export default function Users() {
     userList.forEach(u => {
       forms[u.id] = {
         full_name: u.full_name || '',
+        staff_id: u.staff_id || '',
         role: u.role || 'teacher',
         level: u.level || '',
         subject: u.subject || '',
@@ -62,6 +89,7 @@ export default function Users() {
     setRowEditingId(u.id)
     setRowEditForm({
       full_name: u.full_name || '',
+      staff_id: u.staff_id || '',
       role: u.role || 'teacher',
       level: u.level || '',
       subject: u.subject || '',
@@ -72,6 +100,7 @@ export default function Users() {
     setRowEditingId(null)
     setRowEditForm({
       full_name: '',
+      staff_id: '',
       role: 'teacher',
       level: '',
       subject: '',
@@ -83,6 +112,7 @@ export default function Users() {
       .from('users')
       .update({
         full_name: rowEditForm.full_name,
+        staff_id: rowEditForm.staff_id || null,
         role: rowEditForm.role,
         level: rowEditForm.level || null,
         subject: rowEditForm.subject || null,
@@ -108,6 +138,7 @@ export default function Users() {
         .from('users')
         .update({
           full_name: form.full_name,
+          staff_id: form.staff_id || null,
           role: form.role,
           level: form.level || null,
           subject: form.subject || null,
@@ -145,6 +176,21 @@ export default function Users() {
     }
   }
 
+  const resetUserPassword = async (targetUser) => {
+    const { data: { session } } = await supabase.auth.getSession()
+    const { error } = await supabase.functions.invoke('reset-user-password', {
+      body: { user_id: targetUser.id },
+      headers: { Authorization: `Bearer ${session?.access_token}` },
+    })
+
+    if (error) {
+      setMessage({ type: 'error', text: `Password reset failed for ${targetUser.email}: ${error.message}` })
+      return
+    }
+
+    setMessage({ type: 'success', text: `Password reset for ${targetUser.email}. Default password is royal@123.` })
+  }
+
   const handleCSV = (e) => {
     const file = e.target.files[0]
     if (!file) return
@@ -153,12 +199,33 @@ export default function Users() {
       header: true,
       skipEmptyLines: true,
       complete: async (results) => {
-        const teachers = results.data.map(row => ({
-          full_name: row['Full Name'] || row['full_name'],
-          email: row['Email'] || row['email'],
-          level: row['Level'] || row['level'] || null,
-          subject: row['Subject'] || row['subject'] || null,
-        }))
+        const rows = results.data || []
+        const teachers = []
+        const localErrors = []
+
+        rows.forEach((row, index) => {
+          const full_name = (row['Full Name'] || row['full_name'] || '').trim()
+          const staff_id = (row['Staff ID'] || row['staff_id'] || '').trim()
+          const email = (row['Email'] || row['email'] || '').trim().toLowerCase()
+          const roleRaw = (row['Role'] || row['role'] || '').trim().toLowerCase()
+          const role = roleRaw === 'admin' ? 'admin' : 'teacher'
+          const level = (row['Level'] || row['level'] || '').trim().toLowerCase()
+          const subject = (row['Subject'] || row['subject'] || '').trim()
+
+          const missing = []
+          if (!full_name) missing.push('Full Name')
+          if (!staff_id) missing.push('Staff ID')
+          if (!email) missing.push('Email')
+          if (!level) missing.push('Level')
+          if (!subject) missing.push('Subject')
+
+          if (missing.length > 0) {
+            localErrors.push(`row ${index + 1}: missing ${missing.join(', ')}`)
+            return
+          }
+
+          teachers.push({ full_name, staff_id, email, role, level, subject })
+        })
 
         const { data: { session } } = await supabase.auth.getSession()
         const { data, error } = await supabase.functions.invoke('create-teachers', {
@@ -170,12 +237,13 @@ export default function Users() {
           setMessage({ type: 'error', text: 'Import failed: ' + error.message })
         } else {
           const successCount = data.results?.length || 0
-          const errorCount = data.errors?.length || 0
+          const remoteErrors = data.errors || []
+          const allErrors = [...localErrors, ...remoteErrors.map(e => `row ${e.row || '?'}: ${e.error}`)]
+          const errorCount = allErrors.length
           if (errorCount > 0) {
-            const errorList = data.errors.map(e => e.email + ': ' + e.error).join(', ')
-            setMessage({ type: 'error', text: `${successCount} imported, ${errorCount} failed: ${errorList}` })
+            setMessage({ type: 'error', text: `${successCount} imported, ${errorCount} failed: ${allErrors.join(' | ')}` })
           } else {
-            setMessage({ type: 'success', text: `${successCount} teachers imported successfully with default password royal@123` })
+            setMessage({ type: 'success', text: `${successCount} users imported successfully with default password royal@123` })
           }
           fetchUsers()
         }
@@ -190,10 +258,10 @@ export default function Users() {
       {/* Header */}
       <div className="mb-8 flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Users</h2>
-          <p className="text-gray-500 text-sm mt-1">{users.length} users in the system</p>
+          <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
+          <p className="text-gray-500 text-sm mt-1">View, add, edit or remove users.</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex items-start gap-3">
           {!editing ? (
             <>
               <button
@@ -205,17 +273,26 @@ export default function Users() {
               >
                 Edit All
               </button>
-              <label
-                className={`cursor-pointer px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  importing ? 'bg-gray-300 text-gray-600' : ''
-                }`}
-                style={importing ? {} : { backgroundColor: '#ffc612', color: '#1a1a1a' }}
-                onMouseOver={e => { if (!importing) e.currentTarget.style.backgroundColor = '#e6b10f' }}
-                onMouseOut={e => { if (!importing) e.currentTarget.style.backgroundColor = '#ffc612' }}
-              >
-                {importing ? 'Importing...' : '+ Import Teachers CSV'}
-                <input type="file" accept=".csv" className="hidden" onChange={handleCSV} disabled={importing} />
-              </label>
+              <div className="flex flex-col items-end">
+                <label
+                  className={`cursor-pointer px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    importing ? 'bg-gray-300 text-gray-600' : ''
+                  }`}
+                  style={importing ? {} : { backgroundColor: '#ffc612', color: '#1a1a1a' }}
+                  onMouseOver={e => { if (!importing) e.currentTarget.style.backgroundColor = '#e6b10f' }}
+                  onMouseOut={e => { if (!importing) e.currentTarget.style.backgroundColor = '#ffc612' }}
+                >
+                  {importing ? 'Importing...' : '+ Import Teachers CSV'}
+                  <input type="file" accept=".csv" className="hidden" onChange={handleCSV} disabled={importing} />
+                </label>
+                <a
+                  href={usersCsvTemplateHref}
+                  download="users_import_template.csv"
+                  className="mt-1 text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                >
+                  Download CSV Template
+                </a>
+              </div>
             </>
           ) : (
             <button
@@ -260,7 +337,7 @@ export default function Users() {
       )}
 
       {/* Table */}
-      <div className={`bg-white rounded-xl border border-gray-200 overflow-hidden ${editing ? 'mb-24' : ''}`}>
+      <div className={`bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible ${editing ? 'mb-24' : ''}`}>
         {loading ? (
           <div className="p-8 text-center text-gray-400">Loading...</div>
         ) : users.length === 0 ? (
@@ -270,6 +347,7 @@ export default function Users() {
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="text-left px-6 py-3 text-gray-500 font-medium">Name</th>
+                <th className="text-left px-6 py-3 text-gray-500 font-medium">Staff ID</th>
                 <th className="text-left px-6 py-3 text-gray-500 font-medium">Email</th>
                 <th className="text-left px-6 py-3 text-gray-500 font-medium">Role</th>
                 <th className="text-left px-6 py-3 text-gray-500 font-medium">Level</th>
@@ -300,12 +378,47 @@ export default function Users() {
                         className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
                       />
                     ) : (
-                      <span className="font-medium text-gray-900">
+                      <span className="relative inline-block group">
+                        <span className="font-medium text-gray-900 cursor-default">
                         {user.full_name || <span className="text-gray-400 italic">No name</span>}
                         {user.id === currentUser?.id && (
                           <span className="ml-2 text-xs text-gray-400">(you)</span>
                         )}
+                        </span>
+                        <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-2 z-30 hidden group-hover:block">
+                          <div className="w-72 rounded-lg border border-gray-200 bg-white shadow-lg p-3">
+                            <div className="text-xs font-semibold text-gray-700 mb-2">Assigned Classes:</div>
+                            {(classesByTeacher[user.id] || []).length === 0 ? (
+                              <div className="text-xs text-gray-400 italic">No classes assigned.</div>
+                            ) : (
+                              <div className="max-h-44 overflow-auto space-y-1">
+                                {(classesByTeacher[user.id] || []).map((clsName) => (
+                                  <div key={clsName} className="text-xs text-gray-600">{clsName}</div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </span>
+                    )}
+                  </td>
+                  <td className="px-6 py-3 text-gray-600">
+                    {editing ? (
+                      <input
+                        type="text"
+                        value={editForms[user.id]?.staff_id || ''}
+                        onChange={e => updateField(user.id, 'staff_id', e.target.value)}
+                        className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-28"
+                      />
+                    ) : isRowEditing ? (
+                      <input
+                        type="text"
+                        value={rowEditForm.staff_id}
+                        onChange={e => setRowEditForm(prev => ({ ...prev, staff_id: e.target.value }))}
+                        className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-28"
+                      />
+                    ) : (
+                      user.staff_id || <span className="text-gray-400 italic text-xs">—</span>
                     )}
                   </td>
                   <td className="px-6 py-3 text-gray-600">{user.email}</td>
@@ -422,6 +535,12 @@ export default function Users() {
                             Edit
                           </button>
                           <button
+                            onClick={() => resetUserPassword(user)}
+                            className="px-3 py-1 border border-amber-300 text-amber-700 rounded-lg text-xs hover:bg-amber-50"
+                          >
+                            Reset Password
+                          </button>
+                          <button
                             onClick={() => setConfirmDelete(user)}
                             disabled={user.id === currentUser?.id}
                             className="px-3 py-1 border border-red-200 text-red-500 rounded-lg text-xs hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed"
@@ -442,10 +561,11 @@ export default function Users() {
       {/* CSV format hint */}
       <div className={`mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200 ${editing ? 'mb-24' : ''}`}>
         <p className="text-xs text-gray-500 font-medium mb-2">CSV Format — your file should have these column headers:</p>
-        <code className="text-xs text-gray-600">Full Name, Email, Level, Subject</code>
+        <code className="text-xs text-gray-600">Full Name, Staff ID, Email, Role, Level, Subject</code>
         <p className="text-xs text-gray-400 mt-2">Level: primary · secondary</p>
+        <p className="text-xs text-gray-400">Role defaults to teacher when blank. Valid roles: teacher · admin</p>
         <p className="text-xs text-gray-400">Subject: ESL/GP · Mathematics · Science · VN ESL</p>
-        <p className="text-xs text-gray-400 mt-1">All teachers will be created with the default password: royal@123</p>
+        <p className="text-xs text-gray-400 mt-1">All imported users are created with default password royal@123 and must change password.</p>
       </div>
 
       {/* Sticky save bar */}
