@@ -12,6 +12,7 @@ import BehaviorManagement from './pages/admin/BehaviorManagement'
 import ClassDetail from './pages/ClassDetail'
 import UserSettings from './pages/UserSettings'
 import BehaviorReport from './pages/BehaviorReport'
+import StudentClassDetail from './pages/StudentClassDetail'
 
 const ProtectedRoute = ({ children, adminOnly = false, allowedRoles = null }) => {
   const { user, profile, loading } = useAuth()
@@ -32,6 +33,7 @@ function AppRoutes() {
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><UserSettings /></ProtectedRoute>} />
       <Route path="/class/:classId" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><ClassDetail /></ProtectedRoute>} />
+      <Route path="/student/class/:classId" element={<ProtectedRoute allowedRoles={['student']}><StudentClassDetail /></ProtectedRoute>} />
       <Route path="/teacher/behavior-report" element={<ProtectedRoute allowedRoles={['teacher']}><BehaviorReport /></ProtectedRoute>} />
       <Route path="/admin/students" element={<ProtectedRoute adminOnly><Students /></ProtectedRoute>} />
       <Route path="/admin/classes" element={<ProtectedRoute adminOnly><Classes /></ProtectedRoute>} />

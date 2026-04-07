@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import Layout from '../components/Layout'
+import { useAuth } from '../contexts/AuthContext'
 
 const TERMS = [
   { key: 'midterm_1', label: 'Midterm 1', weeks: 8 },
@@ -78,6 +79,7 @@ const getTermDateSummary = (termKey) => {
 export default function ClassDetail() {
   const { classId } = useParams()
   const navigate = useNavigate()
+  const { profile } = useAuth()
   const [cls, setCls] = useState(null)
   const [selectedTerm, setSelectedTerm] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -128,7 +130,11 @@ export default function ClassDetail() {
               if (!leave) return
             }
             sessionStorage.setItem('gradebook_unsaved_changes', '0')
-            navigate('/dashboard')
+            if (selectedTerm) {
+              setSelectedTerm(null)
+              return
+            }
+            navigate(profile?.role === 'admin' ? '/admin/classes' : '/dashboard')
           }}
           className="text-sm text-gray-400 hover:text-gray-600 mb-4 flex items-center gap-1"
         >

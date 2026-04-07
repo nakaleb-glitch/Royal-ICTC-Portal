@@ -484,8 +484,9 @@ export default function Dashboard() {
                   </div>
                 ) : (
                   classes.map(cls => (
-                    <div
+                    <Link
                       key={cls.id}
+                      to={`/student/class/${cls.id}`}
                       className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all"
                       style={{ borderTopColor: '#9ca3af', borderTopWidth: 3 }}
                     >
@@ -496,7 +497,7 @@ export default function Dashboard() {
                       <div className="text-xs text-gray-400 mt-2">
                         Teacher: {cls.teacher_name || 'TBA'}
                       </div>
-                    </div>
+                    </Link>
                   ))
                 )}
               </div>
