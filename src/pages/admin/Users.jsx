@@ -39,6 +39,40 @@ export default function Users() {
   ].join('\n')
   const usersCsvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(usersCsvTemplate)}`
 
+  const getValidAccessToken = async () => {
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError) return null
+
+    const currentToken = sessionData?.session?.access_token
+    if (currentToken) return currentToken
+
+    const { data: refreshedData, error: refreshError } = await supabase.auth.refreshSession()
+    if (refreshError) return null
+    return refreshedData?.session?.access_token || null
+  }
+
+  const capitalizeFirst = (value) => {
+    const v = String(value || '').trim()
+    if (!v) return ''
+    return v.charAt(0).toUpperCase() + v.slice(1)
+  }
+
+  const normalizeLevel = (value) => {
+    const v = String(value || '').trim().toLowerCase()
+    if (v === 'primary') return 'primary'
+    if (v === 'secondary') return 'secondary'
+    return ''
+  }
+
+  const normalizeSubject = (value) => {
+    const v = String(value || '').trim().toLowerCase()
+    if (v === 'esl/gp') return 'ESL/GP'
+    if (v === 'mathematics') return 'Mathematics'
+    if (v === 'science') return 'Science'
+    if (v === 'vn esl') return 'VN ESL'
+    return capitalizeFirst(value)
+  }
+
   useEffect(() => { fetchUsers() }, [])
 
   const fetchUsers = async () => {
@@ -166,21 +200,42 @@ export default function Users() {
   }
 
   const deleteUser = async (userId) => {
-    const { error } = await supabase.from('users').delete().eq('id', userId)
+    const token = await getValidAccessToken()
+    if (!token) {
+      setMessage({ type: 'error', text: 'Your session expired. Please sign out and sign in again as admin.' })
+      return
+    }
+
+    const { error } = await supabase.functions.invoke('delete-user', {
+      body: { user_id: userId },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+      },
+    })
+
     if (error) {
       setMessage({ type: 'error', text: error.message })
     } else {
-      setMessage({ type: 'success', text: 'User removed.' })
+      setMessage({ type: 'success', text: 'User removed and unassigned from classes.' })
       setConfirmDelete(null)
       fetchUsers()
     }
   }
 
   const resetUserPassword = async (targetUser) => {
-    const { data: { session } } = await supabase.auth.getSession()
+    const token = await getValidAccessToken()
+    if (!token) {
+      setMessage({ type: 'error', text: 'Your session expired. Please sign out and sign in again as admin.' })
+      return
+    }
+
     const { error } = await supabase.functions.invoke('reset-user-password', {
       body: { user_id: targetUser.id },
-      headers: { Authorization: `Bearer ${session?.access_token}` },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+      },
     })
 
     if (error) {
@@ -188,7 +243,11 @@ export default function Users() {
       return
     }
 
+    setUsers(prev =>
+      prev.map(u => (u.id === targetUser.id ? { ...u, must_change_password: true } : u))
+    )
     setMessage({ type: 'success', text: `Password reset for ${targetUser.email}. Default password is royal@123.` })
+    fetchUsers()
   }
 
   const handleCSV = (e) => {
@@ -205,12 +264,12 @@ export default function Users() {
 
         rows.forEach((row, index) => {
           const full_name = (row['Full Name'] || row['full_name'] || '').trim()
-          const staff_id = (row['Staff ID'] || row['staff_id'] || '').trim()
+          const staff_id = capitalizeFirst(row['Staff ID'] || row['staff_id'] || '')
           const email = (row['Email'] || row['email'] || '').trim().toLowerCase()
           const roleRaw = (row['Role'] || row['role'] || '').trim().toLowerCase()
           const role = roleRaw === 'admin' ? 'admin' : 'teacher'
-          const level = (row['Level'] || row['level'] || '').trim().toLowerCase()
-          const subject = (row['Subject'] || row['subject'] || '').trim()
+          const level = normalizeLevel(row['Level'] || row['level'] || '')
+          const subject = normalizeSubject(row['Subject'] || row['subject'] || '')
 
           const missing = []
           if (!full_name) missing.push('Full Name')
@@ -227,10 +286,20 @@ export default function Users() {
           teachers.push({ full_name, staff_id, email, role, level, subject })
         })
 
-        const { data: { session } } = await supabase.auth.getSession()
+        const token = await getValidAccessToken()
+        if (!token) {
+          setMessage({ type: 'error', text: 'Your session expired. Please sign out and sign in again as admin.' })
+          setImporting(false)
+          e.target.value = ''
+          return
+        }
+
         const { data, error } = await supabase.functions.invoke('create-teachers', {
           body: { teachers },
-          headers: { Authorization: `Bearer ${session.access_token}` }
+          headers: {
+            Authorization: `Bearer ${token}`,
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
         })
 
         if (error) {
@@ -379,11 +448,15 @@ export default function Users() {
                       />
                     ) : (
                       <span className="relative inline-block group">
-                        <span className="font-medium text-gray-900 cursor-default">
-                        {user.full_name || <span className="text-gray-400 italic">No name</span>}
-                        {user.id === currentUser?.id && (
-                          <span className="ml-2 text-xs text-gray-400">(you)</span>
-                        )}
+                        <span className="font-medium text-gray-900 cursor-default inline-flex items-center gap-2">
+                          <span
+                            className={`inline-block w-2 h-2 rounded-full ${user.must_change_password ? 'bg-red-500' : 'bg-green-500'}`}
+                            title={user.must_change_password ? 'Pending activation' : 'Activated'}
+                          />
+                          <span>{user.full_name || <span className="text-gray-400 italic">No name</span>}</span>
+                          {user.id === currentUser?.id && (
+                            <span className="text-xs text-gray-400">(you)</span>
+                          )}
                         </span>
                         <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-2 z-30 hidden group-hover:block">
                           <div className="w-72 rounded-lg border border-gray-200 bg-white shadow-lg p-3">

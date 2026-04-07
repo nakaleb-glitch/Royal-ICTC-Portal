@@ -47,7 +47,7 @@ serve(async (req) => {
       .single()
 
     if (callerProfile?.role !== 'admin') {
-      return new Response(JSON.stringify({ error: 'Only admins can reset passwords' }), {
+      return new Response(JSON.stringify({ error: 'Only admins can delete users' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -62,25 +62,40 @@ serve(async (req) => {
       })
     }
 
-    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-      password: 'royal@123',
-      user_metadata: { force_password_change: true },
-    })
-
-    if (updateError) {
-      return new Response(JSON.stringify({ error: updateError.message }), {
+    if (userId === callerData.user.id) {
+      return new Response(JSON.stringify({ error: 'You cannot delete your own account' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    const { error: profileUpdateError } = await supabaseAdmin
+    const { error: classUnassignError } = await supabaseAdmin
+      .from('classes')
+      .update({ teacher_id: null })
+      .eq('teacher_id', userId)
+
+    if (classUnassignError) {
+      return new Response(JSON.stringify({ error: classUnassignError.message }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const { error: profileDeleteError } = await supabaseAdmin
       .from('users')
-      .update({ must_change_password: true })
+      .delete()
       .eq('id', userId)
 
-    if (profileUpdateError) {
-      return new Response(JSON.stringify({ error: profileUpdateError.message }), {
+    if (profileDeleteError) {
+      return new Response(JSON.stringify({ error: profileDeleteError.message }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(userId)
+    if (authDeleteError) {
+      return new Response(JSON.stringify({ error: authDeleteError.message }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -90,9 +105,9 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: err.message }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
 })

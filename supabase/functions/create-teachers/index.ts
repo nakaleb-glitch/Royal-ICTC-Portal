@@ -6,6 +6,28 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const capitalizeFirst = (value: string) => {
+  const v = (value || '').trim()
+  if (!v) return ''
+  return v.charAt(0).toUpperCase() + v.slice(1)
+}
+
+const normalizeLevel = (value: string) => {
+  const v = (value || '').trim().toLowerCase()
+  if (v === 'primary') return 'primary'
+  if (v === 'secondary') return 'secondary'
+  return ''
+}
+
+const normalizeSubject = (value: string) => {
+  const v = (value || '').trim().toLowerCase()
+  if (v === 'esl/gp') return 'ESL/GP'
+  if (v === 'mathematics') return 'Mathematics'
+  if (v === 'science') return 'Science'
+  if (v === 'vn esl') return 'VN ESL'
+  return capitalizeFirst(value || '')
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -23,6 +45,36 @@ serve(async (req) => {
       }
     )
 
+    const authHeader = req.headers.get('Authorization')
+    const token = authHeader?.replace('Bearer ', '')
+    if (!token) {
+      return new Response(
+        JSON.stringify({ error: 'Missing auth token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const { data: callerData, error: callerError } = await supabaseAdmin.auth.getUser(token)
+    if (callerError || !callerData.user) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid auth token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const { data: callerProfile } = await supabaseAdmin
+      .from('users')
+      .select('role')
+      .eq('id', callerData.user.id)
+      .single()
+
+    if (callerProfile?.role !== 'admin') {
+      return new Response(
+        JSON.stringify({ error: 'Only admins can import users' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     const body = await req.json()
     const teachers = body.teachers
 
@@ -39,10 +91,10 @@ serve(async (req) => {
     for (let i = 0; i < teachers.length; i++) {
       const teacher = teachers[i]
       const full_name = (teacher.full_name || '').trim()
-      const staff_id = (teacher.staff_id || '').trim()
+      const staff_id = capitalizeFirst(teacher.staff_id || '')
       const email = (teacher.email || '').trim().toLowerCase()
-      const level = (teacher.level || '').trim().toLowerCase()
-      const subject = (teacher.subject || '').trim()
+      const level = normalizeLevel(teacher.level || '')
+      const subject = normalizeSubject(teacher.subject || '')
       const role = (teacher.role || 'teacher').toString().trim().toLowerCase() || 'teacher'
 
       const missing = []
@@ -86,7 +138,8 @@ serve(async (req) => {
             staff_id,
             role: role === 'admin' ? 'admin' : 'teacher',
             level,
-            subject
+            subject,
+            must_change_password: true
           }, { onConflict: 'id' })
 
         if (upsertError) {
