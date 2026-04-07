@@ -13,11 +13,6 @@ export default function Layout({ children }) {
 
   const navItems = [
     { label: 'Dashboard', path: '/dashboard' },
-    ...(profile?.role === 'admin' ? [
-      { label: 'Students', path: '/admin/students' },
-      { label: 'Classes', path: '/admin/classes' },
-      { label: 'Users', path: '/admin/users' },
-    ] : []),
   ]
 
   return (

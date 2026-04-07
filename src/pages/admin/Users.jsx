@@ -22,6 +22,13 @@ export default function Users() {
   const [message, setMessage] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [importing, setImporting] = useState(false)
+  const [rowEditingId, setRowEditingId] = useState(null)
+  const [rowEditForm, setRowEditForm] = useState({
+    full_name: '',
+    role: 'teacher',
+    level: '',
+    subject: '',
+  })
 
   useEffect(() => { fetchUsers() }, [])
 
@@ -49,6 +56,47 @@ export default function Users() {
   const cancelEditing = () => {
     setEditing(false)
     setEditForms({})
+  }
+
+  const startRowEdit = (u) => {
+    setRowEditingId(u.id)
+    setRowEditForm({
+      full_name: u.full_name || '',
+      role: u.role || 'teacher',
+      level: u.level || '',
+      subject: u.subject || '',
+    })
+  }
+
+  const cancelRowEdit = () => {
+    setRowEditingId(null)
+    setRowEditForm({
+      full_name: '',
+      role: 'teacher',
+      level: '',
+      subject: '',
+    })
+  }
+
+  const saveRowEdit = async (userId) => {
+    const { error } = await supabase
+      .from('users')
+      .update({
+        full_name: rowEditForm.full_name,
+        role: rowEditForm.role,
+        level: rowEditForm.level || null,
+        subject: rowEditForm.subject || null,
+      })
+      .eq('id', userId)
+
+    if (error) {
+      setMessage({ type: 'error', text: error.message })
+      return
+    }
+
+    setMessage({ type: 'success', text: 'User updated successfully.' })
+    cancelRowEdit()
+    fetchUsers()
   }
 
   const saveAll = async () => {
@@ -150,13 +198,21 @@ export default function Users() {
             <>
               <button
                 onClick={() => startEditing(users)}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
+                className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
+                style={{ backgroundColor: '#1f86c7' }}
+                onMouseOver={e => e.currentTarget.style.backgroundColor = '#166a9b'}
+                onMouseOut={e => e.currentTarget.style.backgroundColor = '#1f86c7'}
               >
-                ✏️ Edit All
+                Edit All
               </button>
-              <label className={`cursor-pointer px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors ${
-                importing ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'
-              }`}>
+              <label
+                className={`cursor-pointer px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  importing ? 'bg-gray-300 text-gray-600' : ''
+                }`}
+                style={importing ? {} : { backgroundColor: '#ffc612', color: '#1a1a1a' }}
+                onMouseOver={e => { if (!importing) e.currentTarget.style.backgroundColor = '#e6b10f' }}
+                onMouseOut={e => { if (!importing) e.currentTarget.style.backgroundColor = '#ffc612' }}
+              >
                 {importing ? 'Importing...' : '+ Import Teachers CSV'}
                 <input type="file" accept=".csv" className="hidden" onChange={handleCSV} disabled={importing} />
               </label>
@@ -224,7 +280,9 @@ export default function Users() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {users.map(user => (
+              {users.map(user => {
+                const isRowEditing = !editing && rowEditingId === user.id
+                return (
                 <tr key={user.id} className={editing ? 'bg-yellow-50' : 'hover:bg-gray-50'}>
                   <td className="px-6 py-3">
                     {editing ? (
@@ -232,6 +290,13 @@ export default function Users() {
                         type="text"
                         value={editForms[user.id]?.full_name || ''}
                         onChange={e => updateField(user.id, 'full_name', e.target.value)}
+                        className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
+                      />
+                    ) : isRowEditing ? (
+                      <input
+                        type="text"
+                        value={rowEditForm.full_name}
+                        onChange={e => setRowEditForm(prev => ({ ...prev, full_name: e.target.value }))}
                         className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
                       />
                     ) : (
@@ -249,6 +314,15 @@ export default function Users() {
                       <select
                         value={editForms[user.id]?.role || 'teacher'}
                         onChange={e => updateField(user.id, 'role', e.target.value)}
+                        className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="teacher">Teacher</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    ) : isRowEditing ? (
+                      <select
+                        value={rowEditForm.role}
+                        onChange={e => setRowEditForm(prev => ({ ...prev, role: e.target.value }))}
                         className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="teacher">Teacher</option>
@@ -274,6 +348,17 @@ export default function Users() {
                           <option key={l} value={l}>{levelLabel(l)}</option>
                         ))}
                       </select>
+                    ) : isRowEditing ? (
+                      <select
+                        value={rowEditForm.level}
+                        onChange={e => setRowEditForm(prev => ({ ...prev, level: e.target.value }))}
+                        className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">—</option>
+                        {LEVELS.map(l => (
+                          <option key={l} value={l}>{levelLabel(l)}</option>
+                        ))}
+                      </select>
                     ) : (
                       user.level
                         ? <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">{levelLabel(user.level)}</span>
@@ -292,6 +377,17 @@ export default function Users() {
                           <option key={s} value={s}>{s}</option>
                         ))}
                       </select>
+                    ) : isRowEditing ? (
+                      <select
+                        value={rowEditForm.subject}
+                        onChange={e => setRowEditForm(prev => ({ ...prev, subject: e.target.value }))}
+                        className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">—</option>
+                        {SUBJECTS.map(s => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
                     ) : (
                       user.subject
                         ? <span className="text-gray-700">{user.subject}</span>
@@ -300,17 +396,44 @@ export default function Users() {
                   </td>
                   {!editing && (
                     <td className="px-6 py-3">
-                      <button
-                        onClick={() => setConfirmDelete(user)}
-                        disabled={user.id === currentUser?.id}
-                        className="px-3 py-1 border border-red-200 text-red-500 rounded-lg text-xs hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed"
-                      >
-                        Remove
-                      </button>
+                      {isRowEditing ? (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => saveRowEdit(user.id)}
+                            className="px-3 py-1 text-white rounded-lg text-xs font-medium"
+                            style={{ backgroundColor: '#16a34a' }}
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={cancelRowEdit}
+                            className="px-3 py-1 border border-gray-300 text-gray-600 rounded-lg text-xs hover:bg-gray-50"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => startRowEdit(user)}
+                            className="px-3 py-1 border rounded-lg text-xs font-medium text-white"
+                            style={{ backgroundColor: '#1f86c7', borderColor: '#1f86c7' }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => setConfirmDelete(user)}
+                            disabled={user.id === currentUser?.id}
+                            className="px-3 py-1 border border-red-200 text-red-500 rounded-lg text-xs hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      )}
                     </td>
                   )}
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         )}

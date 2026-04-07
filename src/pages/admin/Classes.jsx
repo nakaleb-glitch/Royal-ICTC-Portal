@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import Layout from '../../components/Layout'
+import { Link } from 'react-router-dom'
 
 const SUBJECTS = ['ESL', 'Mathematics', 'Science', 'Global Perspectives']
+const ACADEMIC_YEAR = '2026–27'
 
 const levelLabel = (l) => ({
   primary: 'Primary',
@@ -25,6 +27,13 @@ export default function Classes() {
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({})
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const [filters, setFilters] = useState({
+    homeroom: 'all',
+    grade: 'all',
+    level: 'all',
+    programme: 'all',
+    subject: 'all',
+  })
 
   useEffect(() => {
     fetchClasses()
@@ -165,6 +174,111 @@ export default function Classes() {
     }
   }
 
+  const getHomeroom = (name) => {
+    if (!name) return null
+    return String(name).trim().split(/\s+/)[0] || null
+  }
+
+  const getGrade = (name) => {
+    if (!name) return null
+    const match = String(name).trim().match(/^(\d+)/)
+    return match ? match[1] : null
+  }
+
+  const normalizeProgramme = (value) => {
+    if (!value) return 'unknown'
+    const v = String(value).trim().toLowerCase()
+    if (v === 'bilingual') return 'bilingual'
+    if (v === 'integrated') return 'integrated'
+    return 'unknown'
+  }
+
+  const levelScoped = classes.filter(c =>
+    filters.level === 'all' || c.level === filters.level
+  )
+
+  const gradeScoped = levelScoped.filter(c =>
+    filters.grade === 'all' || getGrade(c.name) === filters.grade
+  )
+
+  const programmeScoped = gradeScoped.filter(c =>
+    filters.programme === 'all' || c.programme === filters.programme
+  )
+
+  const classScoped = programmeScoped.filter(c =>
+    filters.homeroom === 'all' || getHomeroom(c.name) === filters.homeroom
+  )
+
+  const gradeOptions = Array.from(
+    new Set(levelScoped.map(c => getGrade(c.name)).filter(Boolean))
+  ).sort((a, b) => Number(a) - Number(b))
+
+  const programmeOptions = Array.from(
+    new Set(gradeScoped.map(c => c.programme).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b))
+
+  const homeroomOptions = Array.from(
+    new Set(programmeScoped.map(c => getHomeroom(c.name)).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+
+  const subjectOptions = Array.from(
+    new Set(classScoped.map(c => c.subject).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b))
+
+  const filteredClasses = classes.filter(cls => {
+    const homeroom = getHomeroom(cls.name)
+    const grade = getGrade(cls.name)
+    return (
+      (filters.homeroom === 'all' || homeroom === filters.homeroom) &&
+      (filters.grade === 'all' || grade === filters.grade) &&
+      (filters.level === 'all' || cls.level === filters.level) &&
+      (filters.programme === 'all' || cls.programme === filters.programme) &&
+      (filters.subject === 'all' || cls.subject === filters.subject)
+    )
+  })
+
+  const getUniqueClassSnapshot = (rows) => {
+    const byHomeroom = new Map()
+    rows.forEach(cls => {
+      const homeroom = getHomeroom(cls.name)
+      if (!homeroom) return
+      const grade = getGrade(homeroom) || 'Unknown'
+      const programme = normalizeProgramme(cls.programme)
+      const existing = byHomeroom.get(homeroom)
+      if (!existing) {
+        byHomeroom.set(homeroom, { grade, programme })
+        return
+      }
+      if (existing.programme !== programme) existing.programme = 'unknown'
+    })
+
+    const byGrade = {}
+    Array.from(byHomeroom.values()).forEach(({ grade, programme }) => {
+      if (!byGrade[grade]) byGrade[grade] = { grade, total: 0, bilingual: 0, integrated: 0, unknown: 0 }
+      byGrade[grade].total += 1
+      if (programme === 'bilingual') byGrade[grade].bilingual += 1
+      else if (programme === 'integrated') byGrade[grade].integrated += 1
+      else byGrade[grade].unknown += 1
+    })
+
+    const rowsByGrade = Object.values(byGrade).sort((a, b) => {
+      if (a.grade === 'Unknown') return 1
+      if (b.grade === 'Unknown') return -1
+      return Number(a.grade) - Number(b.grade)
+    })
+
+    const totals = rowsByGrade.reduce((acc, r) => ({
+      total: acc.total + r.total,
+      bilingual: acc.bilingual + r.bilingual,
+      integrated: acc.integrated + r.integrated,
+      unknown: acc.unknown + r.unknown,
+    }), { total: 0, bilingual: 0, integrated: 0, unknown: 0 })
+
+    return { rowsByGrade, totals }
+  }
+
+  const classSnapshot = getUniqueClassSnapshot(filteredClasses)
+
   return (
     <Layout>
       <div className="mb-8 flex justify-between items-center">
@@ -292,11 +406,138 @@ export default function Classes() {
         </div>
       )}
 
+      <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6" style={{ borderTopColor: '#1f86c7', borderTopWidth: 3 }}>
+        <h3 className="font-semibold text-gray-900">Classes Snapshot</h3>
+        <p className="text-xs text-gray-500 mt-1 mb-4">
+          {`School Year ${ACADEMIC_YEAR}`}
+        </p>
+        {classSnapshot.totals.total === 0 ? (
+          <div className="text-sm text-gray-400">No class data for the current selection.</div>
+        ) : (
+          <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center gap-4 text-xs mb-4">
+              <div className="flex items-center gap-2">
+                <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: '#7c3aed' }} />
+                <span className="text-gray-600">Bilingual</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: '#0d9488' }} />
+                <span className="text-gray-600">Integrated</span>
+              </div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-700 mb-2">
+                <span className="font-semibold">Total Classes:</span>{' '}
+                <span className="font-semibold">{classSnapshot.totals.total}</span>
+              </div>
+              <div className="h-6 w-full rounded-full bg-white border border-gray-200 overflow-hidden flex text-[11px] font-semibold text-white">
+                <div
+                  className="h-full flex items-center justify-center"
+                  style={{
+                    width: `${(classSnapshot.totals.bilingual / classSnapshot.totals.total) * 100}%`,
+                    backgroundColor: '#7c3aed'
+                  }}
+                >
+                  {classSnapshot.totals.bilingual > 0 ? classSnapshot.totals.bilingual : ''}
+                </div>
+                <div
+                  className="h-full flex items-center justify-center"
+                  style={{
+                    width: `${(classSnapshot.totals.integrated / classSnapshot.totals.total) * 100}%`,
+                    backgroundColor: '#0d9488'
+                  }}
+                >
+                  {classSnapshot.totals.integrated > 0 ? classSnapshot.totals.integrated : ''}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
+        <div className="flex items-end gap-4 flex-wrap">
+          <div>
+            <label className="text-xs font-medium text-gray-500 block mb-1">Level</label>
+            <select
+              value={filters.level}
+              onChange={e => setFilters(prev => ({ ...prev, level: e.target.value, grade: 'all', programme: 'all', homeroom: 'all', subject: 'all' }))}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Levels</option>
+              <option value="primary">Primary</option>
+              <option value="secondary">Secondary</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-500 block mb-1">Grade</label>
+            <select
+              value={filters.grade}
+              onChange={e => setFilters(prev => ({ ...prev, grade: e.target.value, programme: 'all', homeroom: 'all', subject: 'all' }))}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Grades</option>
+              {gradeOptions.map(g => (
+                <option key={g} value={g}>Grade {g}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-500 block mb-1">Programme</label>
+            <select
+              value={filters.programme}
+              onChange={e => setFilters(prev => ({ ...prev, programme: e.target.value, homeroom: 'all', subject: 'all' }))}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Programmes</option>
+              {programmeOptions.map(p => (
+                <option key={p} value={p}>{programmeLabel(p)}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-500 block mb-1">Class</label>
+            <select
+              value={filters.homeroom}
+              onChange={e => setFilters(prev => ({ ...prev, homeroom: e.target.value, subject: 'all' }))}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Classes</option>
+              {homeroomOptions.map(h => (
+                <option key={h} value={h}>{h}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-500 block mb-1">Subject</label>
+            <select
+              value={filters.subject}
+              onChange={e => setFilters(prev => ({ ...prev, subject: e.target.value }))}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Subjects</option>
+              {subjectOptions.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+          <button
+            onClick={() => setFilters({ homeroom: 'all', grade: 'all', level: 'all', programme: 'all', subject: 'all' })}
+            className="px-3 py-2 rounded-lg text-sm font-medium text-white"
+            style={{ backgroundColor: '#d1232a' }}
+          >
+            Reset
+          </button>
+        </div>
+      </div>
+
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-gray-400">Loading...</div>
         ) : classes.length === 0 ? (
           <div className="p-8 text-center text-gray-400">No classes yet. Create one to get started.</div>
+        ) : filteredClasses.length === 0 ? (
+          <div className="p-8 text-center text-gray-400">No classes match the selected filters.</div>
         ) : (
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
@@ -310,7 +551,7 @@ export default function Classes() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {classes.map(cls => (
+              {filteredClasses.map(cls => (
                 <tr key={cls.id} className="hover:bg-gray-50">
                   <td className="px-6 py-3 font-medium text-gray-900">
                     {editingId === cls.id ? (
@@ -320,7 +561,11 @@ export default function Classes() {
                         onChange={e => setEditForm({ ...editForm, name: e.target.value })}
                         className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-36"
                       />
-                    ) : cls.name}
+                    ) : (
+                      <Link to={`/class/${cls.id}`} className="text-blue-700 hover:text-blue-900 hover:underline">
+                        {cls.name}
+                      </Link>
+                    )}
                   </td>
                   <td className="px-6 py-3">
                     {editingId === cls.id ? (
@@ -391,7 +636,8 @@ export default function Classes() {
                     {editingId === cls.id ? (
                       <div className="flex gap-2">
                         <button onClick={() => saveEdit(cls.id)}
-                          className="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700">
+                          className="px-3 py-1 text-white rounded-lg text-xs font-medium"
+                          style={{ backgroundColor: '#16a34a' }}>
                           Save
                         </button>
                         <button onClick={() => setEditingId(null)}
@@ -402,7 +648,8 @@ export default function Classes() {
                     ) : (
                       <div className="flex gap-2">
                         <button onClick={() => startEdit(cls)}
-                          className="px-3 py-1 border border-gray-300 text-gray-600 rounded-lg text-xs hover:bg-gray-50">
+                          className="px-3 py-1 border rounded-lg text-xs font-medium text-white"
+                          style={{ backgroundColor: '#1f86c7', borderColor: '#1f86c7' }}>
                           Edit
                         </button>
                         <button onClick={() => setConfirmDelete(cls)}
