@@ -8,6 +8,7 @@ import Classes from './pages/admin/Classes'
 import Users from './pages/admin/Users'
 import Resources from './pages/admin/Resources'
 import ClassDetail from './pages/ClassDetail'
+import UserSettings from './pages/UserSettings'
 
 const ProtectedRoute = ({ children, adminOnly = false }) => {
   const { user, profile, loading } = useAuth()
@@ -23,6 +24,7 @@ function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute><UserSettings /></ProtectedRoute>} />
       <Route path="/class/:classId" element={<ProtectedRoute><ClassDetail /></ProtectedRoute>} />
       <Route path="/admin/students" element={<ProtectedRoute adminOnly><Students /></ProtectedRoute>} />
       <Route path="/admin/classes" element={<ProtectedRoute adminOnly><Classes /></ProtectedRoute>} />

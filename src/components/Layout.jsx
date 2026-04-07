@@ -43,6 +43,9 @@ export default function Layout({ children }) {
   }, [location.pathname])
 
   const requiresPasswordChange = !!profile?.must_change_password
+  const displayRole = String(profile?.role || '')
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase())
 
   const handleChangePassword = async (e) => {
     e.preventDefault()
@@ -166,21 +169,33 @@ export default function Layout({ children }) {
 
           {/* Right — Cambridge Logo + user info */}
           <div className="flex items-center gap-6">
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-gray-400">{user?.email}</span>
+            <div className="flex items-center gap-4">
+              <div className="leading-tight text-right">
+                <div className="text-xs font-medium text-gray-100">{profile?.full_name || 'User'}</div>
+                <div className="text-xs text-gray-400">Staff ID: {profile?.staff_id || '—'}</div>
+              </div>
               <span className="text-xs px-2 py-1 rounded-full font-medium"
                 style={{
                   background: profile?.role === 'admin' ? '#d1232a' : '#1f86c7',
                   color: '#fff'
                 }}>
-                {profile?.role}
+                {displayRole || 'User'}
               </span>
+              <Link
+                to="/settings"
+                className="text-xs font-medium transition-colors"
+                style={{ color: '#e5e7eb' }}
+                onMouseOver={e => e.currentTarget.style.color = '#ffc612'}
+                onMouseOut={e => e.currentTarget.style.color = '#e5e7eb'}
+              >
+                User Settings
+              </Link>
               <button
                 onClick={handleSignOut}
                 className="text-xs font-medium transition-colors"
-                style={{ color: '#999' }}
-                onMouseOver={e => e.target.style.color = '#d1232a'}
-                onMouseOut={e => e.target.style.color = '#999'}
+                style={{ color: '#e5e7eb' }}
+                onMouseOver={e => e.currentTarget.style.color = '#d1232a'}
+                onMouseOut={e => e.currentTarget.style.color = '#e5e7eb'}
               >
                 Sign out
               </button>

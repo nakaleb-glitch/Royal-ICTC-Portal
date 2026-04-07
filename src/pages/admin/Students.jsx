@@ -11,6 +11,12 @@ export default function Students() {
   const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState('')
   const [message, setMessage] = useState(null)
+  const [filters, setFilters] = useState({
+    level: 'all',
+    grade: 'all',
+    programme: 'all',
+    homeroom: 'all',
+  })
   const [newStudent, setNewStudent] = useState({
     student_id: '',
     name_vn: '',
@@ -156,7 +162,48 @@ export default function Students() {
     ? 'bg-purple-100 text-purple-700'
     : 'bg-teal-100 text-teal-700'
 
-  const filtered = students.filter(s =>
+  const getGrade = (classValue) => {
+    if (!classValue) return null
+    const match = String(classValue).trim().match(/^(\d+)/)
+    return match ? match[1] : null
+  }
+
+  const levelScoped = students.filter(s =>
+    filters.level === 'all' || s.level === filters.level
+  )
+
+  const gradeScoped = levelScoped.filter(s =>
+    filters.grade === 'all' || getGrade(s.class) === filters.grade
+  )
+
+  const programmeScoped = gradeScoped.filter(s =>
+    filters.programme === 'all' || s.programme === filters.programme
+  )
+
+  const filteredBySelectors = programmeScoped.filter(s =>
+    filters.homeroom === 'all' || s.class === filters.homeroom
+  )
+
+  const gradeOptions = Array.from(
+    new Set(levelScoped.map(s => getGrade(s.class)).filter(Boolean))
+  ).sort((a, b) => Number(a) - Number(b))
+
+  const programmeOptions = Array.from(
+    new Set(gradeScoped.map(s => s.programme).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b))
+
+  const homeroomOptions = Array.from(
+    new Set(programmeScoped.map(s => s.class).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+
+  const studentSnapshot = filteredBySelectors.reduce((acc, s) => {
+    acc.total += 1
+    if (s.programme === 'bilingual') acc.bilingual += 1
+    else if (s.programme === 'integrated') acc.integrated += 1
+    return acc
+  }, { total: 0, bilingual: 0, integrated: 0 })
+
+  const filtered = filteredBySelectors.filter(s =>
     s.name_eng?.toLowerCase().includes(search.toLowerCase()) ||
     s.name_vn?.toLowerCase().includes(search.toLowerCase()) ||
     s.student_id?.toLowerCase().includes(search.toLowerCase()) ||
@@ -289,6 +336,117 @@ export default function Students() {
           </button>
         </div>
       )}
+
+      <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6" style={{ borderTopColor: '#1f86c7', borderTopWidth: 3 }}>
+        <h3 className="font-semibold text-gray-900">Students Snapshot</h3>
+        <p className="text-xs text-gray-500 mt-1 mb-4">Current filtered student totals by programme.</p>
+        {studentSnapshot.total === 0 ? (
+          <div className="text-sm text-gray-400">No student data for the current selection.</div>
+        ) : (
+          <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center gap-4 text-xs mb-4">
+              <div className="flex items-center gap-2">
+                <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: '#7c3aed' }} />
+                <span className="text-gray-600">Bilingual</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: '#0d9488' }} />
+                <span className="text-gray-600">Integrated</span>
+              </div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-700 mb-2">
+                <span className="font-semibold">Total Students:</span>{' '}
+                <span className="font-semibold">{studentSnapshot.total}</span>
+              </div>
+              <div className="h-6 w-full rounded-full bg-white border border-gray-200 overflow-hidden flex text-[11px] font-semibold text-white">
+                <div
+                  className="h-full flex items-center justify-center"
+                  style={{
+                    width: `${(studentSnapshot.bilingual / studentSnapshot.total) * 100}%`,
+                    backgroundColor: '#7c3aed'
+                  }}
+                >
+                  {studentSnapshot.bilingual > 0 ? studentSnapshot.bilingual : ''}
+                </div>
+                <div
+                  className="h-full flex items-center justify-center"
+                  style={{
+                    width: `${(studentSnapshot.integrated / studentSnapshot.total) * 100}%`,
+                    backgroundColor: '#0d9488'
+                  }}
+                >
+                  {studentSnapshot.integrated > 0 ? studentSnapshot.integrated : ''}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+        <div className="flex items-end gap-4 flex-wrap">
+          <div>
+            <label className="text-xs font-medium text-gray-500 block mb-1">Level</label>
+            <select
+              value={filters.level}
+              onChange={e => setFilters(prev => ({ ...prev, level: e.target.value, grade: 'all', programme: 'all', homeroom: 'all' }))}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Levels</option>
+              {Array.from(new Set(students.map(s => s.level).filter(Boolean))).map(level => (
+                <option key={level} value={level}>{levelLabel(level)}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-500 block mb-1">Grade</label>
+            <select
+              value={filters.grade}
+              onChange={e => setFilters(prev => ({ ...prev, grade: e.target.value, programme: 'all', homeroom: 'all' }))}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Grades</option>
+              {gradeOptions.map(g => (
+                <option key={g} value={g}>Grade {g}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-500 block mb-1">Programme</label>
+            <select
+              value={filters.programme}
+              onChange={e => setFilters(prev => ({ ...prev, programme: e.target.value, homeroom: 'all' }))}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Programmes</option>
+              {programmeOptions.map(programme => (
+                <option key={programme} value={programme}>{titleCaseWords(programme)}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-500 block mb-1">Class</label>
+            <select
+              value={filters.homeroom}
+              onChange={e => setFilters(prev => ({ ...prev, homeroom: e.target.value }))}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Classes</option>
+              {homeroomOptions.map(className => (
+                <option key={className} value={className}>{className}</option>
+              ))}
+            </select>
+          </div>
+          <button
+            onClick={() => setFilters({ level: 'all', grade: 'all', programme: 'all', homeroom: 'all' })}
+            className="px-3 py-2 rounded-lg text-sm font-medium text-white"
+            style={{ backgroundColor: '#d1232a' }}
+          >
+            Reset
+          </button>
+        </div>
+      </div>
 
       <div className="mb-4">
         <input

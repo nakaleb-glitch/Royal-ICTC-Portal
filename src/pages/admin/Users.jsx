@@ -10,7 +10,7 @@ const SUBJECTS = ['ESL/GP', 'Mathematics', 'Science', 'VN ESL']
 const levelLabel = (l) => ({
   primary: 'Primary',
   secondary: 'Secondary',
-}[l] || l)
+}[l] || String(l || '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()))
 
 export default function Users() {
   const { user: currentUser } = useAuth()
@@ -73,6 +73,12 @@ export default function Users() {
     if (v === 'vn esl') return 'VN ESL'
     return capitalizeFirstAlpha(value)
   }
+
+  const formatDisplayText = (value) =>
+    String(value || '')
+      .replace(/_/g, ' ')
+      .toLowerCase()
+      .replace(/\b\w/g, (char) => char.toUpperCase())
 
   useEffect(() => { fetchUsers() }, [])
 
@@ -520,7 +526,7 @@ export default function Users() {
                       <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                         user.role === 'admin' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
                       }`}>
-                        {user.role}
+                        {formatDisplayText(user.role)}
                       </span>
                     )}
                   </td>
@@ -578,7 +584,7 @@ export default function Users() {
                       </select>
                     ) : (
                       user.subject
-                        ? <span className="text-gray-700">{user.subject}</span>
+                        ? <span className="text-gray-700">{formatDisplayText(user.subject)}</span>
                         : <span className="text-gray-400 italic text-xs">—</span>
                     )}
                   </td>
