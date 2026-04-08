@@ -27,6 +27,16 @@ export default function Users() {
   const [confirmReset, setConfirmReset] = useState(null)
   const [resetRequestsByStaffId, setResetRequestsByStaffId] = useState({})
   const [importing, setImporting] = useState(false)
+  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [creatingTeacher, setCreatingTeacher] = useState(false)
+  const [createTeacherForm, setCreateTeacherForm] = useState({
+    full_name: '',
+    staff_id: '',
+    email: '',
+    role: 'teacher',
+    level: '',
+    subject: '',
+  })
   const [rowEditingId, setRowEditingId] = useState(null)
   const [rowEditForm, setRowEditForm] = useState({
     full_name: '',
@@ -143,6 +153,7 @@ export default function Users() {
       }
     })
     setEditForms(forms)
+    setShowCreateForm(false)
     setEditing(true)
   }
 
@@ -221,6 +232,71 @@ export default function Users() {
     setSaving(false)
     setEditing(false)
     setEditForms({})
+    fetchUsers()
+  }
+
+  const createTeacher = async () => {
+    const full_name = capitalizeFirstAlpha(createTeacherForm.full_name)
+    const staff_id = capitalizeFirstAlpha(createTeacherForm.staff_id)
+    const email = String(createTeacherForm.email || '').trim().toLowerCase()
+    const role = createTeacherForm.role === 'admin' ? 'admin' : 'teacher'
+    const level = normalizeLevel(createTeacherForm.level)
+    const subject = normalizeSubject(createTeacherForm.subject)
+
+    const missing = []
+    if (!full_name) missing.push('Full Name')
+    if (!staff_id) missing.push('Staff ID')
+    if (!email) missing.push('Email')
+    if (!level) missing.push('Level')
+    if (!subject) missing.push('Subject')
+
+    if (missing.length > 0) {
+      setMessage({ type: 'error', text: `Please complete: ${missing.join(', ')}` })
+      return
+    }
+
+    const token = await getValidAccessToken()
+    if (!token) {
+      setMessage({ type: 'error', text: 'Your session expired. Please sign out and sign in again as admin.' })
+      return
+    }
+
+    setCreatingTeacher(true)
+    const { data, error } = await supabase.functions.invoke('create-teachers', {
+      body: {
+        teachers: [{ full_name, staff_id, email, role, level, subject }]
+      },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+      },
+    })
+
+    if (error) {
+      setMessage({ type: 'error', text: `Unable to create user: ${error.message}` })
+      setCreatingTeacher(false)
+      return
+    }
+
+    const createdCount = data?.results?.length || 0
+    const createErrors = data?.errors || []
+    if (createdCount === 0 || createErrors.length > 0) {
+      setMessage({ type: 'error', text: createErrors[0]?.error || 'Unable to create user.' })
+      setCreatingTeacher(false)
+      return
+    }
+
+    setMessage({ type: 'success', text: `User created successfully. Default password is royal@123.` })
+    setCreateTeacherForm({
+      full_name: '',
+      staff_id: '',
+      email: '',
+      role: 'teacher',
+      level: '',
+      subject: '',
+    })
+    setShowCreateForm(false)
+    setCreatingTeacher(false)
     fetchUsers()
   }
 
@@ -383,13 +459,22 @@ export default function Users() {
           {!editing ? (
             <>
               <button
+                onClick={() => setShowCreateForm(prev => !prev)}
+                className="w-32 px-3 py-1.5 rounded-lg text-sm font-medium text-white transition-colors text-center"
+                style={{ backgroundColor: '#16a34a' }}
+                onMouseOver={e => e.currentTarget.style.backgroundColor = '#15803d'}
+                onMouseOut={e => e.currentTarget.style.backgroundColor = '#16a34a'}
+              >
+                {showCreateForm ? 'Close Form' : 'New Teacher'}
+              </button>
+              <button
                 onClick={() => startEditing(users)}
-                className="w-44 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors text-center"
+                className="w-28 px-3 py-1.5 rounded-lg text-sm font-medium text-white transition-colors text-center"
                 style={{ backgroundColor: '#1f86c7' }}
                 onMouseOver={e => e.currentTarget.style.backgroundColor = '#166a9b'}
                 onMouseOut={e => e.currentTarget.style.backgroundColor = '#1f86c7'}
               >
-                New Teacher
+                Edit All
               </button>
               <div className="flex flex-col items-center">
                 <label
@@ -423,6 +508,79 @@ export default function Users() {
           )}
         </div>
       </div>
+
+      {/* Create Teacher Form */}
+      {!editing && showCreateForm && (
+        <div className="mb-6 p-4 rounded-xl border border-blue-200 bg-blue-50">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">Create Teacher/Admin</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <input
+              type="text"
+              placeholder="Full Name"
+              value={createTeacherForm.full_name}
+              onChange={(e) => setCreateTeacherForm(prev => ({ ...prev, full_name: e.target.value }))}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            />
+            <input
+              type="text"
+              placeholder="Staff ID"
+              value={createTeacherForm.staff_id}
+              onChange={(e) => setCreateTeacherForm(prev => ({ ...prev, staff_id: e.target.value }))}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            />
+            <input
+              type="email"
+              placeholder="Email"
+              value={createTeacherForm.email}
+              onChange={(e) => setCreateTeacherForm(prev => ({ ...prev, email: e.target.value }))}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            />
+            <select
+              value={createTeacherForm.role}
+              onChange={(e) => setCreateTeacherForm(prev => ({ ...prev, role: e.target.value }))}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            >
+              <option value="teacher">Teacher</option>
+              <option value="admin">Admin</option>
+            </select>
+            <select
+              value={createTeacherForm.level}
+              onChange={(e) => setCreateTeacherForm(prev => ({ ...prev, level: e.target.value }))}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            >
+              <option value="">Select level</option>
+              {LEVELS.map((l) => (
+                <option key={l} value={l}>{levelLabel(l)}</option>
+              ))}
+            </select>
+            <select
+              value={createTeacherForm.subject}
+              onChange={(e) => setCreateTeacherForm(prev => ({ ...prev, subject: e.target.value }))}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            >
+              <option value="">Select subject</option>
+              {SUBJECTS.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+          <div className="mt-3 flex justify-end gap-2">
+            <button
+              onClick={() => setShowCreateForm(false)}
+              className="px-4 py-2 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={createTeacher}
+              disabled={creatingTeacher}
+              className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-60"
+            >
+              {creatingTeacher ? 'Creating...' : 'Create User'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Message */}
       {message && (
