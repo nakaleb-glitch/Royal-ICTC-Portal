@@ -109,19 +109,23 @@ export default function Dashboard() {
           .filter(Boolean)
           .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { numeric: true }))
 
-        const teacherIds = Array.from(
-          new Set(studentClasses.map((cls) => cls.teacher_id).filter(Boolean))
-        )
-        if (teacherIds.length > 0) {
+        // Fetch teacher names for all classes via the foreign key relationship
+        if (studentClasses.length > 0) {
           const { data: teacherRows } = await supabase
-            .from('users')
-            .select('id, full_name')
-            .in('id', teacherIds)
+            .from('classes')
+            .select('id, users(id, full_name)')
+            .in('id', studentClasses.map(c => c.id))
 
-          const teacherNameById = Object.fromEntries((teacherRows || []).map((t) => [t.id, t.full_name]))
+          const teacherNameByClassId = {}
+          teacherRows.forEach(cls => {
+            if (cls.users?.full_name) {
+              teacherNameByClassId[cls.id] = cls.users.full_name
+            }
+          })
+          
           studentClasses = studentClasses.map((cls) => ({
             ...cls,
-            teacher_name: teacherNameById[cls.teacher_id] || null,
+            teacher_name: teacherNameByClassId[cls.id] || 'No teacher assigned',
           }))
         }
       }

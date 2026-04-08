@@ -453,27 +453,37 @@ export default function Users() {
           <h2 className="text-2xl font-bold text-gray-900">Teacher Management</h2>
           <p className="text-gray-500 text-sm mt-1">View, add, edit or remove teacher accounts.</p>
         </div>
-        <div className="flex items-start gap-3">
-          {!editing ? (
+        <div className="flex items-start gap-3 flex-wrap justify-end">
+          <button
+            onClick={() => {
+              if (editing) return
+              setShowCreateForm(prev => !prev)
+            }}
+            disabled={editing}
+            className="w-32 px-3 py-1.5 rounded-lg text-sm font-medium text-white transition-colors text-center disabled:opacity-60 disabled:cursor-not-allowed"
+            style={{ backgroundColor: '#16a34a' }}
+            onMouseOver={e => { if (!editing) e.currentTarget.style.backgroundColor = '#15803d' }}
+            onMouseOut={e => { if (!editing) e.currentTarget.style.backgroundColor = '#16a34a' }}
+          >
+            {showCreateForm && !editing ? 'Close Form' : 'New Teacher'}
+          </button>
+          <button
+            onClick={() => {
+              if (editing) {
+                cancelEditing()
+                return
+              }
+              startEditing(users)
+            }}
+            className="w-28 px-3 py-1.5 rounded-lg text-sm font-medium text-white transition-colors text-center"
+            style={{ backgroundColor: '#1f86c7' }}
+            onMouseOver={e => e.currentTarget.style.backgroundColor = '#166a9b'}
+            onMouseOut={e => e.currentTarget.style.backgroundColor = '#1f86c7'}
+          >
+            {editing ? 'Exit Edit' : 'Edit All'}
+          </button>
+          {!editing && (
             <>
-              <button
-                onClick={() => setShowCreateForm(prev => !prev)}
-                className="w-32 px-3 py-1.5 rounded-lg text-sm font-medium text-white transition-colors text-center"
-                style={{ backgroundColor: '#16a34a' }}
-                onMouseOver={e => e.currentTarget.style.backgroundColor = '#15803d'}
-                onMouseOut={e => e.currentTarget.style.backgroundColor = '#16a34a'}
-              >
-                {showCreateForm ? 'Close Form' : 'New Teacher'}
-              </button>
-              <button
-                onClick={() => startEditing(users)}
-                className="w-28 px-3 py-1.5 rounded-lg text-sm font-medium text-white transition-colors text-center"
-                style={{ backgroundColor: '#1f86c7' }}
-                onMouseOver={e => e.currentTarget.style.backgroundColor = '#166a9b'}
-                onMouseOut={e => e.currentTarget.style.backgroundColor = '#1f86c7'}
-              >
-                Edit All
-              </button>
               <div className="flex flex-col items-center">
                 <label
                   className={`cursor-pointer w-44 px-4 py-2 rounded-lg text-sm font-medium transition-colors text-center ${
@@ -496,13 +506,6 @@ export default function Users() {
                 </a>
               </div>
             </>
-          ) : (
-            <button
-              onClick={cancelEditing}
-              className="px-4 py-2 border border-gray-300 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50"
-            >
-              Cancel
-            </button>
           )}
         </div>
       </div>
