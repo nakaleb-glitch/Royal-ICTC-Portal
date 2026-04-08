@@ -247,8 +247,6 @@ export default function Users() {
     if (!full_name) missing.push('Full Name')
     if (!staff_id) missing.push('Staff ID')
     if (!email) missing.push('Email')
-    if (!level) missing.push('Level')
-    if (!subject) missing.push('Subject')
 
     if (missing.length > 0) {
       setMessage({ type: 'error', text: `Please complete: ${missing.join(', ')}` })
@@ -264,7 +262,7 @@ export default function Users() {
     setCreatingTeacher(true)
     const { data, error } = await supabase.functions.invoke('create-teachers', {
       body: {
-        teachers: [{ full_name, staff_id, email, role, level, subject }]
+        teachers: [{ full_name, staff_id, email, role, level: level || null, subject: subject || null }]
       },
       headers: {
         Authorization: `Bearer ${token}`,
@@ -548,7 +546,7 @@ export default function Users() {
               onChange={(e) => setCreateTeacherForm(prev => ({ ...prev, level: e.target.value }))}
               className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
             >
-              <option value="">Select level</option>
+              <option value="">Level (optional)</option>
               {LEVELS.map((l) => (
                 <option key={l} value={l}>{levelLabel(l)}</option>
               ))}
@@ -558,7 +556,7 @@ export default function Users() {
               onChange={(e) => setCreateTeacherForm(prev => ({ ...prev, subject: e.target.value }))}
               className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
             >
-              <option value="">Select subject</option>
+              <option value="">Subject (optional)</option>
               {SUBJECTS.map((s) => (
                 <option key={s} value={s}>{s}</option>
               ))}
