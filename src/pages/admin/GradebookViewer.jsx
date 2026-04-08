@@ -164,7 +164,10 @@ export default function GradebookViewer() {
     
     // Get unique attribute names and sort them
     const uniqueAttributes = [...new Set(data?.map(d => d.attribute) || [])]
-    setAttributeNames(uniqueAttributes)
+    
+    // If no attributes found, use fallback hardcoded names
+    const fallbackAttributes = ['Communication', 'Collaboration', 'Organisation', 'Critical Thinking', 'Creative']
+    setAttributeNames(uniqueAttributes.length > 0 ? uniqueAttributes : fallbackAttributes)
   }
 
   const fetchStudentData = async () => {
@@ -240,7 +243,7 @@ export default function GradebookViewer() {
       studentMap[student.id] = {
         student,
         participation: [],
-        assignments: { total: 0, max: 0 },
+        assignments: { total: 0, max: 0, gradedCount: 0 },
         progressTest: [],
         attributes: {},
       }
@@ -253,16 +256,22 @@ export default function GradebookViewer() {
       }
     })
 
-    // Populate assignments
+    // Populate assignments - only count assignments that have grades
     assignmentGradesData?.forEach(grade => {
       if (studentMap[grade.student_id]) {
         studentMap[grade.student_id].assignments.total += grade.score || 0
+        studentMap[grade.student_id].assignments.gradedCount += 1
       }
     })
-    assignmentData?.forEach(a => {
-      Object.values(studentMap).forEach(s => {
-        s.assignments.max += a.max_points || 0
-      })
+    
+    // Only add max_points for assignments that have grades (exclude missing assignments)
+    assignmentGradesData?.forEach(ag => {
+      const assignment = assignmentData?.find(a => a.id === ag.assignment_id)
+      if (assignment) {
+        Object.values(studentMap).forEach(s => {
+          s.assignments.max += assignment.max_points || 0
+        })
+      }
     })
 
     // Populate progress test
@@ -282,6 +291,7 @@ export default function GradebookViewer() {
     // Calculate totals and format data
     const formattedData = Object.values(studentMap).map(({ student, participation, assignments, progressTest, attributes }) => {
       const participationAvg = avg(participation)
+      // Calculate assignment average only from graded assignments (exclude missing)
       const assignmentAvg = assignments.max > 0 ? (assignments.total / assignments.max) * 100 : null
       const progressTestAvg = avg(progressTest)
 
@@ -412,6 +422,8 @@ export default function GradebookViewer() {
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
                       <th className="text-left px-4 py-3 text-gray-500 font-medium sticky left-0 bg-gray-50">Student</th>
+                      <th className="text-center px-4 py-3 text-gray-500 font-medium">Participation (20%)</th>
+                      <th className="text-center px-4 py-3 text-gray-500 font-medium">Marked Assignments (80%)</th>
                       <th className="text-center px-4 py-3 text-gray-500 font-medium">Attainment</th>
                       <th className="text-center px-4 py-3 text-gray-500 font-medium">Progress Test</th>
                       <th className="text-center px-4 py-3 text-gray-500 font-medium">Overall</th>
@@ -424,7 +436,7 @@ export default function GradebookViewer() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {studentData.map(({ student, attainment, progressTest, overall, letterGrade, attributes }) => (
+                    {studentData.map(({ student, participation, attainment, progressTest, overall, letterGrade, attributes }) => (
                       <tr key={student.id} className="hover:bg-gray-50">
                         <td className="px-4 py-3 sticky left-0 bg-white">
                           <div className="font-medium">
@@ -435,7 +447,22 @@ export default function GradebookViewer() {
                           <div className="text-xs text-gray-400">{student.student_id || '—'}</div>
                         </td>
                         <td className="px-4 py-3 text-center">
+                          <span className="text-gray-600">{fmt(participation)}</span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
                           <span className="text-gray-600">{fmt(attainment)}%</span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`font-semibold ${
+                            attainment != null 
+                              ? attainment >= 80 ? 'text-green-600' 
+                              : attainment >= 65 ? 'text-blue-600'
+                              : attainment >= 50 ? 'text-amber-600'
+                              : 'text-red-600'
+                              : 'text-gray-300'
+                          }`}>
+                            {fmt(attainment)}%
+                          </span>
                         </td>
                         <td className="px-4 py-3 text-center">
                           <span className="text-gray-600">{fmt(progressTest)}</span>
