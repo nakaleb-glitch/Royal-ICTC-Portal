@@ -25,12 +25,35 @@ const letterGradeFromPercentage = (score) => {
 
 const ATTRIBUTE_NAMES = ['Communication', 'Collaboration', 'Organisation', 'Critical Thinking', 'Creative']
 
+// Define subject sort order
+const SUBJECT_ORDER = ['ESL', 'Mathematics', 'Science', 'Global Perspectives']
+
+const sortClassesBySubject = (classes) => {
+  return [...classes].sort((a, b) => {
+    const subjectA = a.subject || ''
+    const subjectB = b.subject || ''
+    const indexA = SUBJECT_ORDER.indexOf(subjectA)
+    const indexB = SUBJECT_ORDER.indexOf(subjectB)
+    
+    // If both subjects are in the order list, sort by that
+    if (indexA !== -1 && indexB !== -1) {
+      return indexA - indexB
+    }
+    // If only one is in the list, put it first
+    if (indexA !== -1) return -1
+    if (indexB !== -1) return 1
+    // Otherwise, sort alphabetically
+    return (a.name || '').localeCompare(b.name || '')
+  })
+}
+
 export default function GradebookViewer() {
   const navigate = useNavigate()
   const [homerooms, setHomerooms] = useState([])
   const [selectedHomeroom, setSelectedHomeroom] = useState('')
   const [selectedTerm, setSelectedTerm] = useState('')
   const [classes, setClasses] = useState([])
+  const [sortedClasses, setSortedClasses] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedSubject, setSelectedSubject] = useState('')
   const [studentData, setStudentData] = useState([])
@@ -64,6 +87,7 @@ export default function GradebookViewer() {
       fetchClasses()
     } else {
       setClasses([])
+      setSortedClasses([])
       setStudentData([])
       setProgramme('')
       setSelectedSubject('')
@@ -79,14 +103,21 @@ export default function GradebookViewer() {
     
     setClasses(data || [])
     
+    // Sort classes by subject order
+    const sorted = sortClassesBySubject(data || [])
+    setSortedClasses(sorted)
+    
     // Determine programme and set subjects
     if (data?.length > 0) {
       const firstProgramme = data[0].programme
       setProgramme(firstProgramme)
       
-      // Auto-select first subject
-      if (data.length > 0 && !selectedSubject) {
-        setSelectedSubject(data[0].id)
+      // Auto-select ESL first (or first class if ESL not available)
+      const eslClass = sorted.find(c => c.subject === 'ESL')
+      if (eslClass) {
+        setSelectedSubject(eslClass.id)
+      } else if (sorted.length > 0) {
+        setSelectedSubject(sorted[0].id)
       }
     }
   }
@@ -102,12 +133,13 @@ export default function GradebookViewer() {
     const selectedClass = classes.find(c => c.id === selectedSubject)
     if (!selectedClass) return
 
-    // Fetch students enrolled in this class
+    // Fetch students enrolled in this specific class
     const { data: enrollmentData } = await supabase
       .from('class_students')
       .select('student_id')
       .eq('class_id', selectedSubject)
     
+    // Get student IDs from enrollment
     const studentIds = enrollmentData?.map(e => e.student_id) || []
     
     if (studentIds.length === 0) {
@@ -115,14 +147,14 @@ export default function GradebookViewer() {
       return
     }
 
-    // Fetch student details
+    // Fetch student details - match by id
     const { data: studentData } = await supabase
       .from('students')
       .select('*')
       .in('id', studentIds)
       .order('name_eng')
 
-    // Fetch participation grades
+    // Fetch participation grades for this class
     const { data: participationData } = await supabase
       .from('participation_grades')
       .select('student_id, score')
@@ -130,7 +162,7 @@ export default function GradebookViewer() {
       .eq('term', selectedTerm)
       .in('student_id', studentIds)
 
-    // Fetch assignments and grades
+    // Fetch assignments for this class
     const { data: assignmentData } = await supabase
       .from('assignments')
       .select('id, max_points')
@@ -148,7 +180,7 @@ export default function GradebookViewer() {
       assignmentGradesData = agData || []
     }
 
-    // Fetch progress test grades
+    // Fetch progress test grades for this class
     const { data: progressTestData } = await supabase
       .from('progress_test_grades')
       .select('student_id, score')
@@ -156,7 +188,7 @@ export default function GradebookViewer() {
       .eq('term', selectedTerm)
       .in('student_id', studentIds)
 
-    // Fetch student attributes
+    // Fetch student attributes for this class
     const { data: attributesData } = await supabase
       .from('student_attributes')
       .select('student_id, attribute, score')
@@ -238,7 +270,7 @@ export default function GradebookViewer() {
 
   const getSubjectClasses = () => {
     if (!programme) return []
-    return classes.filter(c => c.programme === programme)
+    return sortedClasses.filter(c => c.programme === programme)
   }
 
   if (loading) {
@@ -266,7 +298,7 @@ export default function GradebookViewer() {
 
       {/* Filters */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Homeroom Class</label>
             <select
@@ -305,7 +337,7 @@ export default function GradebookViewer() {
       </div>
 
       {/* Subject Tabs */}
-      {selectedHomeroom && selectedTerm && classes.length > 0 && (
+      {selectedHomeroom && selectedTerm && sortedClasses.length > 0 && (
         <>
           <div className="flex gap-1 border-b border-gray-200 mb-6">
             {getSubjectClasses().map(cls => (
