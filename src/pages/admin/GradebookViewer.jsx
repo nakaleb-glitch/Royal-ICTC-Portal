@@ -94,6 +94,18 @@ export default function GradebookViewer() {
     }
   }, [selectedHomeroom])
 
+  // Auto-select ESL when term is selected
+  useEffect(() => {
+    if (selectedHomeroom && selectedTerm && sortedClasses.length > 0) {
+      const eslClass = sortedClasses.find(c => c.subject === 'ESL')
+      if (eslClass) {
+        setSelectedSubject(eslClass.id)
+      } else if (sortedClasses.length > 0) {
+        setSelectedSubject(sortedClasses[0].id)
+      }
+    }
+  }, [selectedHomeroom, selectedTerm, sortedClasses])
+
   const fetchClasses = async () => {
     const { data } = await supabase
       .from('classes')
