@@ -23,8 +23,6 @@ const letterGradeFromPercentage = (score) => {
   return 'E'
 }
 
-const ATTRIBUTE_NAMES = ['Communication', 'Collaboration', 'Organisation', 'Critical Thinking', 'Creative']
-
 // Define subject sort order
 const SUBJECT_ORDER = ['ESL', 'Mathematics', 'Science', 'Global Perspectives']
 
@@ -58,6 +56,7 @@ export default function GradebookViewer() {
   const [selectedSubject, setSelectedSubject] = useState('')
   const [studentData, setStudentData] = useState([])
   const [programme, setProgramme] = useState('')
+  const [attributeNames, setAttributeNames] = useState([])
 
   // Fetch unique homerooms
   useEffect(() => {
@@ -91,6 +90,7 @@ export default function GradebookViewer() {
       setStudentData([])
       setProgramme('')
       setSelectedSubject('')
+      setAttributeNames([])
     }
   }, [selectedHomeroom])
 
@@ -126,8 +126,34 @@ export default function GradebookViewer() {
   useEffect(() => {
     if (selectedHomeroom && selectedTerm && selectedSubject && classes.length > 0) {
       fetchStudentData()
+    } else {
+      setStudentData([])
     }
   }, [selectedHomeroom, selectedTerm, selectedSubject, classes])
+
+  // Fetch attribute names when classes are loaded
+  useEffect(() => {
+    if (selectedHomeroom && selectedTerm && sortedClasses.length > 0) {
+      fetchAttributeNames()
+    }
+  }, [selectedHomeroom, selectedTerm, sortedClasses])
+
+  const fetchAttributeNames = async () => {
+    // Get attribute names from the first class to establish the order
+    const firstClass = sortedClasses[0]
+    if (!firstClass) return
+
+    const { data } = await supabase
+      .from('student_attributes')
+      .select('attribute')
+      .eq('class_id', firstClass.id)
+      .eq('term', selectedTerm)
+      .limit(100)
+    
+    // Get unique attribute names and sort them
+    const uniqueAttributes = [...new Set(data?.map(d => d.attribute) || [])]
+    setAttributeNames(uniqueAttributes)
+  }
 
   const fetchStudentData = async () => {
     const selectedClass = classes.find(c => c.id === selectedSubject)
@@ -373,7 +399,7 @@ export default function GradebookViewer() {
                       <th className="text-center px-4 py-3 text-gray-500 font-medium">Progress Test</th>
                       <th className="text-center px-4 py-3 text-gray-500 font-medium">Overall</th>
                       <th className="text-center px-4 py-3 text-gray-500 font-medium">Grade</th>
-                      {ATTRIBUTE_NAMES.map(attr => (
+                      {attributeNames.map(attr => (
                         <th key={attr} className="text-center px-3 py-3 text-gray-500 font-medium text-xs">
                           {attr}
                         </th>
@@ -419,7 +445,7 @@ export default function GradebookViewer() {
                             {letterGrade}
                           </span>
                         </td>
-                        {ATTRIBUTE_NAMES.map(attr => (
+                        {attributeNames.map(attr => (
                           <td key={attr} className="px-3 py-3 text-center">
                             <span className="text-gray-600">{attributes[attr] != null ? fmt(attributes[attr]) : '—'}</span>
                           </td>
