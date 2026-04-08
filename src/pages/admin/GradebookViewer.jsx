@@ -151,14 +151,14 @@ export default function GradebookViewer() {
   }, [selectedHomeroom, selectedTerm, sortedClasses])
 
   const fetchAttributeNames = async () => {
-    // Get attribute names from the first class to establish the order
-    const firstClass = sortedClasses[0]
-    if (!firstClass) return
+    // Get attribute names from the currently selected class
+    const selectedClass = classes.find(c => c.id === selectedSubject)
+    if (!selectedClass) return
 
     const { data } = await supabase
       .from('student_attributes')
       .select('attribute')
-      .eq('class_id', firstClass.id)
+      .eq('class_id', selectedClass.id)
       .eq('term', selectedTerm)
       .limit(100)
     
@@ -323,10 +323,10 @@ export default function GradebookViewer() {
     <Layout>
       <div className="mb-8">
         <button
-          onClick={() => navigate('/admin/classes')}
-          className="text-sm text-gray-400 hover:text-gray-600 mb-4 flex items-center gap-1"
+          onClick={() => navigate('/dashboard')}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors mb-4 flex items-center gap-2"
         >
-          ← Go Back
+          ← Go Back to Dashboard
         </button>
         <h2 className="text-2xl font-bold text-gray-900">Admin Gradebook Viewer</h2>
         <p className="text-gray-500 text-sm mt-1">
@@ -396,10 +396,15 @@ export default function GradebookViewer() {
           {/* Student Grade Table */}
           {studentData.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <div className="px-5 py-4 border-b border-gray-100">
                 <h3 className="text-lg font-semibold text-gray-900">
                   Student Grades - {classes.find(c => c.id === selectedSubject)?.name}
                 </h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Teacher: {classes.find(c => c.id === selectedSubject)?.users?.full_name || '—'}
+                </p>
+              </div>
+              <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
                 <span className="text-sm text-gray-500">{studentData.length} students</span>
               </div>
               <div className="overflow-x-auto">
