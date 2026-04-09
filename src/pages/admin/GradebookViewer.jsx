@@ -155,7 +155,7 @@ export default function GradebookViewer() {
 
   const fetchStandardAttributeNames = async () => {
     // Always use standard consistent attributes across all subjects
-    const standardAttributes = ['Confident', 'Responsible', 'Reflective', 'Innovative', 'Engaged']
+    const standardAttributes = ['confident', 'responsible', 'reflective', 'innovative', 'engaged']
     setAttributeNames(standardAttributes)
   }
 
@@ -240,7 +240,7 @@ export default function GradebookViewer() {
     // Fetch progress test grades including ESL components
     const { data: progressTestData } = await supabase
       .from('progress_test_grades')
-      .select('student_id, score, reading_writing, listening, speaking')
+      .select('student_id, score, reading_writing, listening, speaking, rw_total, l_total, s_total, total_points')
       .eq('class_id', selectedSubject)
       .eq('term', selectedTerm)
       .in('student_id', studentIds)
@@ -284,10 +284,33 @@ export default function GradebookViewer() {
       const attainment = assignmentMax[student.id] > 0 ? (assignmentTotals[student.id] / assignmentMax[student.id]) * 100 : null
       const pt = progressTestMap[student.id]
 
+      // Calculate progress test percentages
+      let progressTest = null
+      let progressTestRW = null
+      let progressTestListening = null
+      let progressTestSpeaking = null
+
+      if (pt) {
+        // Overall progress test percentage
+        if (pt.score != null && pt.total_points > 0) {
+          progressTest = (pt.score / pt.total_points) * 100
+        }
+        // ESL component percentages
+        if (pt.reading_writing != null && pt.rw_total > 0) {
+          progressTestRW = (pt.reading_writing / pt.rw_total) * 100
+        }
+        if (pt.listening != null && pt.l_total > 0) {
+          progressTestListening = (pt.listening / pt.l_total) * 100
+        }
+        if (pt.speaking != null && pt.s_total > 0) {
+          progressTestSpeaking = (pt.speaking / pt.s_total) * 100
+        }
+      }
+
       const overallParts = []
       if (participation != null) overallParts.push(participation * 0.2)
       if (attainment != null) overallParts.push(attainment * 0.5)
-      if (pt?.score != null) overallParts.push(pt.score * 0.3)
+      if (progressTest != null) overallParts.push(progressTest * 0.3)
       const overall = overallParts.length > 0 ? overallParts.reduce((a, b) => a + b, 0) : null
 
       return {
@@ -295,10 +318,10 @@ export default function GradebookViewer() {
         ...rest,
         participation,
         attainment,
-        progressTest: pt?.score || null,
-        progressTestRW: pt?.reading_writing || null,
-        progressTestListening: pt?.listening || null,
-        progressTestSpeaking: pt?.speaking || null,
+        progressTest,
+        progressTestRW,
+        progressTestListening,
+        progressTestSpeaking,
         overall,
         letterGrade: letterGradeFromPercentage(overall),
         attributes: attributesMap[student.id] || {},
@@ -432,11 +455,11 @@ export default function GradebookViewer() {
                       <th className="text-center px-4 py-3 font-medium bg-gray-200 text-gray-700">Overall</th>
                       <th className="text-center px-4 py-3 font-medium bg-gray-200 text-gray-700">Grade</th>
                       
-                      {attributeNames.map(attr => (
-                        <th key={attr} className="text-center px-3 py-3 font-medium bg-blue-100 text-blue-800 text-xs">
-                          {attr}
-                        </th>
-                      ))}
+      {attributeNames.map(attr => (
+        <th key={attr} className="text-center px-3 py-3 font-medium bg-blue-100 text-blue-800 text-xs">
+          {attr.charAt(0).toUpperCase() + attr.slice(1)}
+        </th>
+      ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
