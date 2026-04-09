@@ -1711,7 +1711,7 @@ function StudentAttributesTab({ classId, term, students, onDirtyChange }) {
             <tr>
               <th className="text-left px-4 py-3 text-gray-500 font-medium sticky left-0 bg-gray-50 min-w-48">Student</th>
               {ATTRIBUTE_FIELDS.map(field => (
-                <th key={field.key} className="text-center px-3 py-3 text-gray-500 font-medium min-w-44 border-l border-gray-100">
+                <th key={field.key} className="text-center px-3 py-3 font-medium min-w-44 border-l border-gray-100 bg-blue-100 text-blue-800">
                   {field.label}
                 </th>
               ))}
@@ -1731,7 +1731,7 @@ function StudentAttributesTab({ classId, term, students, onDirtyChange }) {
                     <div className="text-xs text-gray-400">{student.student_id || '—'}</div>
                   </td>
                   {ATTRIBUTE_FIELDS.map(field => (
-                    <td key={field.key} className="px-3 py-2 text-center border-l border-gray-100">
+                    <td key={field.key} className="px-3 py-2 text-center border-l border-gray-100 bg-blue-50">
                       <select
                         value={row[field.key] ?? ''}
                         onChange={e => setAttribute(student.id, field.key, e.target.value)}
@@ -1759,19 +1759,47 @@ function StudentAttributesTab({ classId, term, students, onDirtyChange }) {
 function SummaryTab({ classId, term, students, isESL }) {
   const [data, setData] = useState({})
   const [loading, setLoading] = useState(true)
+  const [attributes, setAttributes] = useState({})
+
+  const ATTRIBUTE_FIELDS = [
+    { key: 'confident', label: 'Confident' },
+    { key: 'responsible', label: 'Responsible' },
+    { key: 'reflective', label: 'Reflective' },
+    { key: 'innovative', label: 'Innovative' },
+    { key: 'engaged', label: 'Engaged' },
+  ]
 
   useEffect(() => { fetchAll() }, [classId, term])
 
   const fetchAll = async () => {
     setLoading(true)
-    const [{ data: partData }, { data: assignData }, { data: assignGrades }, { data: ptData }] = await Promise.all([
+    const [
+      { data: partData }, 
+      { data: assignData }, 
+      { data: assignGrades }, 
+      { data: ptData },
+      { data: attributesData }
+    ] = await Promise.all([
       supabase.from('participation_grades').select('*').eq('class_id', classId).eq('term', term),
       supabase.from('assignments').select('*').eq('class_id', classId).eq('term', term),
       supabase.from('assignment_grades').select('*'),
       supabase.from('progress_test_grades').select('*').eq('class_id', classId).eq('term', term),
+      supabase.from('student_attributes').select('*').eq('class_id', classId).eq('term', term),
     ])
 
     const summary = {}
+    const attributesMap = {}
+
+    attributesData?.forEach(row => {
+      attributesMap[row.student_id] = {
+        confident: row.confident,
+        responsible: row.responsible,
+        reflective: row.reflective,
+        innovative: row.innovative,
+        engaged: row.engaged,
+      }
+    })
+
     students.forEach(student => {
       const partScores = partData?.filter(g => g.student_id === student.id && g.score != null).map(g => g.score) || []
       const partAvg = avg(partScores)
@@ -1797,10 +1825,20 @@ function SummaryTab({ classId, term, students, isESL }) {
         ? (attainment * 0.75) + (ptOverall * 0.25)
         : null
 
-      summary[student.id] = { partPct, assignAvg, attainment, ptOverall, total }
+      summary[student.id] = { 
+        partPct, 
+        assignAvg, 
+        attainment, 
+        ptOverall, 
+        total,
+        ptRW: pt?.reading_writing_score,
+        ptListening: pt?.listening_score,
+        ptSpeaking: pt?.speaking_score,
+      }
     })
 
     setData(summary)
+    setAttributes(attributesMap)
     setLoading(false)
   }
 
@@ -1830,17 +1868,33 @@ function SummaryTab({ classId, term, students, isESL }) {
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="text-left px-4 py-3 text-gray-500 font-medium sticky left-0 bg-gray-50 min-w-48">Student</th>
-                <th className="text-center px-4 py-3 text-gray-500 font-medium">Participation %</th>
-                <th className="text-center px-4 py-3 text-gray-500 font-medium">Assignments %</th>
-                <th className="text-center px-4 py-3 text-gray-500 font-medium bg-blue-50">Attainment %</th>
-                <th className="text-center px-4 py-3 text-gray-500 font-medium">Progress Test %</th>
-                <th className="text-center px-4 py-3 text-gray-500 font-medium bg-green-50">Total %</th>
-                <th className="text-center px-4 py-3 text-gray-500 font-medium">Letter Grade</th>
+                <th className="text-center px-4 py-3 font-medium bg-gray-200 text-gray-700">Participation</th>
+                <th className="text-center px-4 py-3 font-medium bg-gray-200 text-gray-700">Marked Assignments</th>
+                <th className="text-center px-4 py-3 font-medium bg-green-100 text-green-800">Attainment</th>
+                
+                {isESL ? (
+                  <>
+                    <th className="text-center px-4 py-3 font-medium bg-gray-200 text-gray-700">Progress Test (R/W)</th>
+                    <th className="text-center px-4 py-3 font-medium bg-gray-200 text-gray-700">Progress Test (L)</th>
+                    <th className="text-center px-4 py-3 font-medium bg-gray-200 text-gray-700">Progress Test (S)</th>
+                  </>
+                ) : null}
+
+                <th className="text-center px-4 py-3 font-medium bg-green-100 text-green-800">Progress Test</th>
+                <th className="text-center px-4 py-3 font-medium bg-gray-200 text-gray-700">Overall</th>
+                <th className="text-center px-4 py-3 font-medium bg-gray-200 text-gray-700">Grade</th>
+                
+                {ATTRIBUTE_FIELDS.map(attr => (
+                  <th key={attr.key} className="text-center px-3 py-3 font-medium bg-blue-100 text-blue-800 text-xs">
+                    {attr.label}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {students.map(student => {
                 const d = data[student.id] || {}
+                const attrs = attributes[student.id] || {}
                 return (
                   <tr key={student.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 sticky left-0 bg-white">
@@ -1851,14 +1905,29 @@ function SummaryTab({ classId, term, students, isESL }) {
                       </div>
                       <div className="text-xs text-gray-400">{student.student_id || '—'}</div>
                     </td>
-                    <td className={`px-4 py-3 text-center font-medium ${scoreColor(d.partPct)}`}>{fmt(d.partPct)}{d.partPct != null ? '%' : ''}</td>
-                    <td className={`px-4 py-3 text-center font-medium ${scoreColor(d.assignAvg)}`}>{fmt(d.assignAvg)}{d.assignAvg != null ? '%' : ''}</td>
-                    <td className={`px-4 py-3 text-center font-semibold bg-blue-50 ${scoreColor(d.attainment)}`}>{fmt(d.attainment)}{d.attainment != null ? '%' : ''}</td>
-                    <td className={`px-4 py-3 text-center font-medium ${scoreColor(d.ptOverall)}`}>{fmt(d.ptOverall)}{d.ptOverall != null ? '%' : ''}</td>
-                    <td className={`px-4 py-3 text-center font-bold bg-green-50 ${scoreColor(d.total)}`}>{fmt(d.total)}{d.total != null ? '%' : ''}</td>
-                    <td className="px-4 py-3 text-center">
+                    <td className={`px-4 py-3 text-center font-medium bg-gray-50 ${scoreColor(d.partPct)}`}>{fmt(d.partPct)}</td>
+                    <td className={`px-4 py-3 text-center font-medium bg-gray-50 ${scoreColor(d.assignAvg)}`}>{fmt(d.assignAvg)}</td>
+                    <td className={`px-4 py-3 text-center font-semibold bg-green-50 ${scoreColor(d.attainment)}`}>{fmt(d.attainment)}</td>
+                    
+                    {isESL ? (
+                      <>
+                        <td className="px-4 py-3 text-center bg-gray-50 text-gray-600">{fmt(d.ptRW)}</td>
+                        <td className="px-4 py-3 text-center bg-gray-50 text-gray-600">{fmt(d.ptListening)}</td>
+                        <td className="px-4 py-3 text-center bg-gray-50 text-gray-600">{fmt(d.ptSpeaking)}</td>
+                      </>
+                    ) : null}
+
+                    <td className={`px-4 py-3 text-center font-medium bg-green-50 ${scoreColor(d.ptOverall)}`}>{fmt(d.ptOverall)}</td>
+                    <td className={`px-4 py-3 text-center font-bold bg-gray-50 ${scoreColor(d.total)}`}>{fmt(d.total)}</td>
+                    <td className="px-4 py-3 text-center bg-gray-50">
                       <span className="font-semibold text-gray-800">{letterGradeFromPercentage(d.total)}</span>
                     </td>
+                    
+                    {ATTRIBUTE_FIELDS.map(attr => (
+                      <td key={attr.key} className="px-3 py-3 text-center bg-blue-50">
+                        <span className="text-gray-600">{attrs[attr.key] || '—'}</span>
+                      </td>
+                    ))}
                   </tr>
                 )
               })}
