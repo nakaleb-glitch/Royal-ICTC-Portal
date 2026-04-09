@@ -160,14 +160,32 @@ export default function GradebookViewer() {
   }
 
   const fetchAllHomeroomStudents = async () => {
-    // Get all students in this homeroom (not just per subject)
+    // Get ALL students across ALL subject classes for this homeroom
+    // Get all class ids for this homeroom first
+    const classIds = sortedClasses.map(c => c.id)
+    
+    // Get all student enrollments for these classes
+    const { data: enrollments } = await supabase
+      .from('class_students')
+      .select('student_id')
+      .in('class_id', classIds)
+
+    // Get unique student ids
+    const uniqueStudentIds = [...new Set(enrollments?.map(e => e.student_id) || [])]
+    
+    if (uniqueStudentIds.length === 0) {
+      setStudentData([])
+      return
+    }
+
+    // Get student details
     const { data: students } = await supabase
       .from('students')
       .select('*')
-      .eq('homeroom', selectedHomeroom)
+      .in('id', uniqueStudentIds)
       .order('name_eng')
 
-    // Initialize empty student map with all homeroom students
+    // Initialize empty student map
     const studentMap = {}
     students?.forEach(student => {
       studentMap[student.id] = {
