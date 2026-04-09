@@ -1156,23 +1156,13 @@ export default function Dashboard() {
                   <>
                     <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-100">
                       <h4 className="text-sm font-medium text-gray-700">Create Announcement</h4>
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setShowTeacherAnnouncements(null)}
-                          className="py-1 px-3 rounded-lg bg-gray-200 text-gray-700 text-xs font-medium hover:bg-gray-300 transition-colors"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => postTeacherAnnouncement()}
-                          disabled={postingAnnouncement}
-                          className="py-1 px-3 rounded-lg bg-green-600 text-white text-xs font-medium hover:bg-green-700 transition-colors disabled:opacity-60"
-                        >
-                          {postingAnnouncement ? 'Posting...' : 'Send'}
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowTeacherAnnouncements(null)}
+                        className="py-1 px-3 rounded-lg bg-gray-200 text-gray-700 text-xs font-medium hover:bg-gray-300 transition-colors"
+                      >
+                        Cancel
+                      </button>
                     </div>
                   </>
                 )}
@@ -1352,38 +1342,6 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {showTeacherAnnouncements === 'view' && (
-                  <div className="mt-0 space-y-2 max-h-[20rem] overflow-y-auto">
-                    {teacherAnnouncements.length === 0 ? (
-                      <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-500">
-                        No announcements posted yet.
-                      </div>
-                    ) : teacherAnnouncements.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => setSelectedDashboardItem({
-                          title: item.title,
-                          event_date: item.created_at,
-                          label: 'Teacher Announcement',
-                          venue: item.targets.map((t) => t.class_name).join(', ') || '—',
-                          description: item.description,
-                          plan_url: null,
-                          link_url: item.link_url,
-                          attachment_url: item.attachment_url,
-                          attachment_name: item.attachment_name,
-                        })}
-                        className="w-full text-left rounded-lg border border-gray-200 bg-gray-50 px-3 py-3 hover:bg-green-50 transition-colors"
-                      >
-                        <div className="text-sm font-medium text-gray-800">{item.title}</div>
-                        <div className="text-xs text-gray-500 mt-1">{formatDateWithDay(item.created_at)}</div>
-                        <div className="text-[10px] text-gray-400 mt-0.5">
-                          Sent to: {item.targets.map((t) => t.class_name).join(', ')}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
 
               <div className="bg-white rounded-xl border border-gray-200 p-5 h-full flex flex-col" style={{ borderTopColor: '#d1232a', borderTopWidth: 3 }}>
