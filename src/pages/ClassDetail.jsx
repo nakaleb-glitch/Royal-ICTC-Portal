@@ -835,7 +835,8 @@ function ParticipationTab({ classId, term, students, onDirtyChange }) {
       .map(w => grades[`${studentId}_${w.week}`]?.score)
       .filter(s => s !== undefined && s !== '' && s !== null)
       .map(Number)
-    return avg(scores)
+    const average = avg(scores)
+    return average != null ? average * 10 : null
   }
 
   const weekSchedule = PARTICIPATION_WEEK_SCHEDULE[term] || Array.from({ length: 7 }, (_, idx) => ({
@@ -867,7 +868,7 @@ function ParticipationTab({ classId, term, students, onDirtyChange }) {
                   )}
                 </th>
               ))}
-              <th className="text-center px-4 py-3 text-gray-500 font-medium min-w-20">Avg /10</th>
+              <th className="text-center px-4 py-3 text-gray-500 font-medium min-w-20">Participation %</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -947,8 +948,15 @@ function ParticipationTab({ classId, term, students, onDirtyChange }) {
                   )
                 })}
                 <td className="px-4 py-3 text-center">
-                  <span className={`font-semibold ${getAvg(student.id) != null ? 'text-blue-600' : 'text-gray-300'}`}>
-                    {fmt(getAvg(student.id))}
+                  <span className={`font-semibold ${
+                    getAvg(student.id) != null 
+                      ? getAvg(student.id) >= 80 ? 'text-green-600' 
+                      : getAvg(student.id) >= 65 ? 'text-blue-600'
+                      : getAvg(student.id) >= 50 ? 'text-amber-600'
+                      : 'text-red-600'
+                      : 'text-gray-300'
+                  }`}>
+                    {getAvg(student.id) != null ? `${fmt(getAvg(student.id))}%` : '—'}
                   </span>
                 </td>
               </tr>
