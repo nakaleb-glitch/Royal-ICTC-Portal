@@ -125,7 +125,7 @@ export default function ClassDetail() {
       .from('class_students')
       .select(`
         students(*),
-        students!inner(user_id)
+        students(user_id)
       `)
       .eq('class_id', classId)
 
