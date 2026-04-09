@@ -1479,7 +1479,7 @@ function ProgressTestTab({ classId, term, students, isESL, onDirtyChange }) {
               ) : (
                 <th className="text-center px-3 py-3 text-gray-500 font-medium min-w-32">Score {totals.total_points ? `/ ${totals.total_points}` : ''}</th>
               )}
-                <th className="text-center px-4 py-3 font-medium min-w-24 bg-green-100 text-green-800 border-l border-gray-200">Overall</th>
+                <th className="text-center px-4 py-3 font-medium min-w-24 bg-green-100 text-green-800 border-l border-gray-200" style={{ backgroundClip: 'padding-box' }}>Overall</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
