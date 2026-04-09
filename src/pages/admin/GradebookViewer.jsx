@@ -151,7 +151,7 @@ export default function GradebookViewer() {
     if (selectedHomeroom && selectedTerm && selectedSubject && studentData.length > 0) {
       fetchStudentGradesForSubject()
     }
-  }, [selectedHomeroom, selectedTerm, selectedSubject, studentData.length])
+  }, [selectedHomeroom, selectedTerm, selectedSubject, studentData])
 
   const fetchStandardAttributeNames = async () => {
     // Always use standard consistent attributes across all subjects
@@ -292,6 +292,7 @@ export default function GradebookViewer() {
 
       return {
         student,
+        ...rest,
         participation,
         attainment,
         progressTest: pt?.score || null,
@@ -301,7 +302,6 @@ export default function GradebookViewer() {
         overall,
         letterGrade: letterGradeFromPercentage(overall),
         attributes: attributesMap[student.id] || {},
-        ...rest
       }
     }))
   }
