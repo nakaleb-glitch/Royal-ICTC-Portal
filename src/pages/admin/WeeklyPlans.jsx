@@ -277,8 +277,13 @@ export default function WeeklyPlans() {
                   <div className="space-y-3">
                     {Array.from({ length: lessonCount }, (_, i) => i + 1).map(lesson => (
                       <div key={lesson} className="flex items-center gap-4">
-                        <div className="w-24 text-sm font-medium text-gray-600">
-                          Lesson #{lesson}:
+                        <div className="w-24">
+                          <div className="text-sm font-medium text-gray-600">
+                            Lesson #{lesson}:
+                          </div>
+                          <div className="text-xs text-gray-400 mt-0.5">
+                            Day - P#/P#
+                          </div>
                         </div>
                         <div className="flex-1 h-10 bg-gray-50 rounded-lg border border-gray-200 border-dashed cursor-pointer hover:border-blue-300 hover:bg-blue-50 transition-colors">
                         </div>
