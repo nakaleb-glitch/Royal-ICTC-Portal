@@ -244,7 +244,7 @@ export default function GradebookViewer() {
     // Fetch progress test grades including ESL components
     const { data: progressTestData } = await supabase
       .from('progress_test_grades')
-      .select('student_id, score, reading_writing, listening, speaking, rw_total, l_total, s_total, total_points')
+      .select('student_id, score, reading_writing_score, listening_score, speaking_score, reading_writing_total, listening_total, speaking_total, total_points')
       .eq('class_id', selectedSubject)
       .eq('term', selectedTerm)
       .in('student_id', studentIds)
@@ -306,14 +306,14 @@ export default function GradebookViewer() {
           progressTest = (pt.score / pt.total_points) * 100
         }
         // ESL component percentages
-        if (pt.reading_writing != null && pt.rw_total > 0) {
-          progressTestRW = (pt.reading_writing / pt.rw_total) * 100
+        if (pt.reading_writing_score != null && pt.reading_writing_total > 0) {
+          progressTestRW = (pt.reading_writing_score / pt.reading_writing_total) * 100
         }
-        if (pt.listening != null && pt.l_total > 0) {
-          progressTestListening = (pt.listening / pt.l_total) * 100
+        if (pt.listening_score != null && pt.listening_total > 0) {
+          progressTestListening = (pt.listening_score / pt.listening_total) * 100
         }
-        if (pt.speaking != null && pt.s_total > 0) {
-          progressTestSpeaking = (pt.speaking / pt.s_total) * 100
+        if (pt.speaking_score != null && pt.speaking_total > 0) {
+          progressTestSpeaking = (pt.speaking_score / pt.speaking_total) * 100
         }
       }
 
