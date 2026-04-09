@@ -571,7 +571,8 @@ export default function Students() {
     <Layout>
       <button
         onClick={() => navigate('/dashboard')}
-        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors mb-4 flex items-center gap-2"
+        className="text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity mb-4 flex items-center gap-2"
+        style={{ backgroundColor: '#1f86c7' }}
       >
         ← Go Back
       </button>

@@ -443,7 +443,8 @@ export default function Users() {
     <Layout>
       <button
         onClick={() => navigate('/dashboard')}
-        className="text-sm text-gray-400 hover:text-gray-600 mb-4 flex items-center gap-1"
+        className="text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity mb-4 flex items-center gap-2"
+        style={{ backgroundColor: '#1f86c7' }}
       >
         ← Go Back
       </button>
