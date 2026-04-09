@@ -192,55 +192,57 @@ export default function WeeklyPlans() {
         <p className="text-gray-500 text-sm mt-1">Monitor weekly plan completion for all classes</p>
       </div>
 
-      {/* Week Selector */}
+      {/* Week Selector + Class Toggles */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">School Week</label>
-          <select
-            value={selectedWeek}
-            onChange={(e) => setSelectedWeek(Number(e.target.value))}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {ALL_WEEKS.map((weekItem, idx) => (
-              <option key={weekItem.week} value={idx}>
-                {weekItem.label} — {weekItem.range}
-              </option>
-            ))}
-          </select>
+        <div className="flex items-center gap-6 flex-wrap">
+          <div className="w-64">
+            <label className="block text-xs font-medium text-gray-500 mb-1">School Week</label>
+            <select
+              value={selectedWeek}
+              onChange={(e) => setSelectedWeek(Number(e.target.value))}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {ALL_WEEKS.map((weekItem, idx) => (
+                <option key={weekItem.week} value={idx}>
+                  {weekItem.label} — {weekItem.range}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          {/* Homeroom Class Toggles */}
+          {homerooms.length > 0 && (
+            <div className="flex gap-1 flex-1 overflow-x-auto">
+              {homerooms.map(h => (
+                <button
+                  key={h}
+                  onClick={() => setSelectedHomeroom(h)}
+                  className={`px-4 py-2 text-sm font-medium transition-colors rounded-lg ${
+                    selectedHomeroom === h
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {h}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Homeroom Class Toggles */}
-      {homerooms.length > 0 && (
-        <div className="flex gap-1 border-b border-gray-200 mb-6 overflow-x-auto pb-1">
-          {homerooms.map(h => (
-            <button
-              key={h}
-              onClick={() => setSelectedHomeroom(h)}
-              className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
-                selectedHomeroom === h
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {h}
-            </button>
-          ))}
-        </div>
-      )}
 
       {/* Overall Status */}
       {selectedHomeroom && sortedClasses.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">{selectedHomeroom} Weekly Plan</h3>
-              <span className={`inline-block px-2 py-1 rounded-full font-medium mt-2 ${
+              <h3 className="text-2xl font-bold text-gray-900">{selectedHomeroom} Weekly Plan</h3>
+              <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium mt-2 ${
                 programme === 'bilingual' 
                   ? 'bg-purple-100 text-purple-700' 
                   : 'bg-teal-100 text-teal-700'
               }`}>
-                {programme === 'bilingual' ? 'Bilingual Programme' : 'Integrated Programme'}
+                {programme === 'bilingual' ? 'Bilingual' : 'Integrated'}
               </span>
             </div>
             <div className="flex items-center gap-3">
