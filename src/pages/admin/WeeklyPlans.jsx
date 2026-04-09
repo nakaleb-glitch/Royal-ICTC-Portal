@@ -196,7 +196,6 @@ export default function WeeklyPlans() {
       <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
         <div className="flex items-center gap-6">
           <div className="w-64 shrink-0">
-            <label className="block text-xs font-medium text-gray-500 mb-1">School Week</label>
             <select
               value={selectedWeek}
               onChange={(e) => setSelectedWeek(Number(e.target.value))}
