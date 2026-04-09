@@ -1380,16 +1380,83 @@ export default function Dashboard() {
               </div>
 
               <div className="bg-white rounded-xl border border-gray-200 p-5 h-full flex flex-col" style={{ borderTopColor: '#d1232a', borderTopWidth: 3 }}>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-gray-900">Behavior Report Tool</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Behavior Report Tool</h3>
+                <div className="grid grid-cols-2 gap-3 mb-4">
                   <button
                     type="button"
-                    onClick={() => setShowTeacherSubmissions((prev) => !prev)}
-                    className="text-[11px] px-2 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-50"
+                    onClick={() => setShowTeacherSubmissions('create')}
+                    className="py-2 px-4 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
                   >
-                    {showTeacherSubmissions ? 'Hide Submissions' : 'View Submissions'}
+                    Create new
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowTeacherSubmissions('view')}
+                    className="py-2 px-4 rounded-lg bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200 transition-colors"
+                  >
+                    View all reports
                   </button>
                 </div>
+
+                {showTeacherSubmissions === 'create' && (
+                  <>
+                    <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-100">
+                      <h4 className="text-sm font-medium text-gray-700">Create Behavior Report</h4>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowTeacherSubmissions(null)}
+                          className="py-1 px-3 rounded-lg bg-gray-200 text-gray-700 text-xs font-medium hover:bg-gray-300 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => submitBehaviorReportInline(e)}
+                          disabled={savingBehaviorReport}
+                          className="py-1 px-3 rounded-lg bg-green-600 text-white text-xs font-medium hover:bg-green-700 transition-colors disabled:opacity-60"
+                        >
+                          {savingBehaviorReport ? 'Sending...' : 'Send'}
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {showTeacherSubmissions === 'view' && (
+                  <>
+                    <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-100">
+                      <h4 className="text-sm font-medium text-gray-700">All Reports</h4>
+                      <button
+                        type="button"
+                        onClick={() => setShowTeacherSubmissions(null)}
+                        className="py-1 px-3 rounded-lg bg-gray-200 text-gray-700 text-xs font-medium hover:bg-gray-300 transition-colors"
+                      >
+                        Close
+                      </button>
+                    </div>
+                    <div className="space-y-2 max-h-[20rem] overflow-y-auto">
+                      {teacherSubmittedReports.length === 0 ? (
+                        <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-500">
+                          No reports submitted yet.
+                        </div>
+                      ) : teacherSubmittedReports.map((report) => (
+                        <button
+                          key={report.id}
+                          type="button"
+                          onClick={() => setSelectedBehaviorSubmission(report)}
+                          className="w-full text-left rounded-lg border border-gray-200 bg-gray-50 px-3 py-3 hover:bg-red-50 transition-colors"
+                        >
+                          <div className="text-sm font-medium text-gray-800">{report.students?.name_eng || 'Student'}</div>
+                          <div className="text-xs text-gray-500 mt-1">{report.incident_date} • {report.incident_type} / {report.severity}</div>
+                          <div className="text-[10px] text-gray-400 mt-0.5">
+                            Status: {report.status}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
                 <form onSubmit={submitBehaviorReportInline} className="flex flex-col flex-1 gap-2">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <select
