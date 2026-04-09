@@ -459,11 +459,11 @@ export default function GradebookViewer() {
                               : 'text-red-600'
                               : 'text-gray-300'
                           }`}>
-                            {participation != null ? `${fmt(participation)}%` : '—'}
+                            {participation != null ? fmt(participation) : '—'}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-center bg-gray-50">
-                          <span className="text-gray-600">{fmt(attainment)}%</span>
+                          <span className="text-gray-600">{fmt(attainment)}</span>
                         </td>
                         <td className="px-4 py-3 text-center bg-green-50">
                           <span className={`font-semibold ${
@@ -474,7 +474,7 @@ export default function GradebookViewer() {
                               : 'text-red-600'
                               : 'text-gray-300'
                           }`}>
-                            {fmt(attainment)}%
+                            {fmt(attainment)}
                           </span>
                         </td>
                         
@@ -499,7 +499,7 @@ export default function GradebookViewer() {
                               : 'text-red-600'
                               : 'text-gray-300'
                           }`}>
-                            {fmt(overall)}%
+                            {fmt(overall)}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-center bg-gray-50">
