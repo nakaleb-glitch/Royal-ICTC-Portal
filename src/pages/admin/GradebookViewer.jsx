@@ -413,27 +413,27 @@ export default function GradebookViewer() {
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
                       <th className="text-left px-4 py-3 text-gray-500 font-medium sticky left-0 bg-gray-50">Student</th>
-                      <th className="text-center px-4 py-3 font-medium bg-gray-100 text-gray-600">Participation</th>
-                      <th className="text-center px-4 py-3 font-medium bg-gray-100 text-gray-600">Marked Assignments</th>
-                      <th className="text-center px-4 py-3 font-medium bg-green-50 text-green-700">Attainment</th>
+                      <th className="text-center px-4 py-3 font-medium bg-gray-200 text-gray-700">Participation</th>
+                      <th className="text-center px-4 py-3 font-medium bg-gray-200 text-gray-700">Marked Assignments</th>
+                      <th className="text-center px-4 py-3 font-medium bg-green-100 text-green-800">Attainment</th>
                       
                       {/* Conditional columns based on subject */}
                       {classes.find(c => c.id === selectedSubject)?.subject === 'ESL' ? (
                         <>
-                          <th className="text-center px-4 py-3 font-medium bg-gray-100 text-gray-600">Progress Test (R/W)</th>
-                          <th className="text-center px-4 py-3 font-medium bg-gray-100 text-gray-600">Progress Test (L)</th>
-                          <th className="text-center px-4 py-3 font-medium bg-gray-100 text-gray-600">Progress Test (S)</th>
-                          <th className="text-center px-4 py-3 font-medium bg-green-50 text-green-700">Progress Test (Overall)</th>
+                          <th className="text-center px-4 py-3 font-medium bg-gray-200 text-gray-700">Progress Test (R/W)</th>
+                          <th className="text-center px-4 py-3 font-medium bg-gray-200 text-gray-700">Progress Test (L)</th>
+                          <th className="text-center px-4 py-3 font-medium bg-gray-200 text-gray-700">Progress Test (S)</th>
+                          <th className="text-center px-4 py-3 font-medium bg-green-100 text-green-800">Progress Test (Overall)</th>
                         </>
                       ) : (
-                        <th className="text-center px-4 py-3 font-medium bg-green-50 text-green-700">Progress Test</th>
+                        <th className="text-center px-4 py-3 font-medium bg-green-100 text-green-800">Progress Test</th>
                       )}
                       
-                      <th className="text-center px-4 py-3 font-medium bg-gray-100 text-gray-600">Overall</th>
-                      <th className="text-center px-4 py-3 font-medium bg-gray-100 text-gray-600">Grade</th>
+                      <th className="text-center px-4 py-3 font-medium bg-gray-200 text-gray-700">Overall</th>
+                      <th className="text-center px-4 py-3 font-medium bg-gray-200 text-gray-700">Grade</th>
                       
                       {attributeNames.map(attr => (
-                        <th key={attr} className="text-center px-3 py-3 font-medium bg-blue-50 text-blue-700 text-xs">
+                        <th key={attr} className="text-center px-3 py-3 font-medium bg-blue-100 text-blue-800 text-xs">
                           {attr}
                         </th>
                       ))}
@@ -450,7 +450,7 @@ export default function GradebookViewer() {
                           </div>
                           <div className="text-xs text-gray-400">{student.student_id || '—'}</div>
                         </td>
-                        <td className="px-4 py-3 text-center">
+                        <td className="px-4 py-3 text-center bg-gray-50">
                           <span className={`font-semibold ${
                             participation != null 
                               ? participation >= 80 ? 'text-green-600' 
@@ -462,10 +462,10 @@ export default function GradebookViewer() {
                             {participation != null ? `${fmt(participation)}%` : '—'}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-center">
+                        <td className="px-4 py-3 text-center bg-gray-50">
                           <span className="text-gray-600">{fmt(attainment)}%</span>
                         </td>
-                        <td className="px-4 py-3 text-center">
+                        <td className="px-4 py-3 text-center bg-green-50">
                           <span className={`font-semibold ${
                             attainment != null 
                               ? attainment >= 80 ? 'text-green-600' 
@@ -481,16 +481,16 @@ export default function GradebookViewer() {
                         {/* Conditional ESL columns */}
                         {classes.find(c => c.id === selectedSubject)?.subject === 'ESL' ? (
                           <>
-                            <td className="px-4 py-3 text-center"><span className="text-gray-600">{fmt(progressTestRW)}</span></td>
-                            <td className="px-4 py-3 text-center"><span className="text-gray-600">{fmt(progressTestListening)}</span></td>
-                            <td className="px-4 py-3 text-center"><span className="text-gray-600">{fmt(progressTestSpeaking)}</span></td>
-                            <td className="px-4 py-3 text-center"><span className="text-gray-600">{fmt(progressTest)}</span></td>
+                            <td className="px-4 py-3 text-center bg-gray-50"><span className="text-gray-600">{fmt(progressTestRW)}</span></td>
+                            <td className="px-4 py-3 text-center bg-gray-50"><span className="text-gray-600">{fmt(progressTestListening)}</span></td>
+                            <td className="px-4 py-3 text-center bg-gray-50"><span className="text-gray-600">{fmt(progressTestSpeaking)}</span></td>
+                            <td className="px-4 py-3 text-center bg-green-50"><span className="text-gray-600">{fmt(progressTest)}</span></td>
                           </>
                         ) : (
-                          <td className="px-4 py-3 text-center"><span className="text-gray-600">{fmt(progressTest)}</span></td>
+                          <td className="px-4 py-3 text-center bg-green-50"><span className="text-gray-600">{fmt(progressTest)}</span></td>
                         )}
                         
-                        <td className="px-4 py-3 text-center">
+                        <td className="px-4 py-3 text-center bg-gray-50">
                           <span className={`font-semibold ${
                             overall != null 
                               ? overall >= 80 ? 'text-green-600' 
@@ -502,7 +502,7 @@ export default function GradebookViewer() {
                             {fmt(overall)}%
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-center">
+                        <td className="px-4 py-3 text-center bg-gray-50">
                           <span className={`inline-block w-8 h-8 leading-8 rounded font-bold text-sm ${
                             letterGrade === 'A*' || letterGrade === 'A' ? 'bg-green-100 text-green-700'
                             : letterGrade === 'B' ? 'bg-blue-100 text-blue-700'
@@ -514,7 +514,7 @@ export default function GradebookViewer() {
                         </td>
                         
                         {attributeNames.map(attr => (
-                          <td key={attr} className="px-3 py-3 text-center">
+                          <td key={attr} className="px-3 py-3 text-center bg-blue-50">
                             <span className="text-gray-600">{attributes[attr] != null ? fmt(attributes[attr]) : '—'}</span>
                           </td>
                         ))}
