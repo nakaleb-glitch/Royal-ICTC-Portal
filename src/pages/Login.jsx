@@ -79,11 +79,9 @@ export default function Login() {
           <div className="p-10 text-center">
             <h1 className="text-2xl font-bold text-gray-900 mb-1">Cambridge Programme Portal</h1>
             <p className="text-gray-400 text-sm mb-8">
-              {mode === 'teacher'
-                ? 'Login using your Staff ID. You will need to reset your password upon first login.'
-                : mode === 'student'
-                  ? 'Login using your Student ID. You will need to reset your password upon first login.'
-                  : 'Click the button below to login.'}
+              {mode === 'teacher' || mode === 'student'
+                ? 'Please use your Staff/Student ID to log in. You will need to reset your password upon first login.'
+                : 'Click the button below to login.'}
             </p>
 
             {mode === 'teacher' || mode === 'student' ? (
@@ -137,20 +135,13 @@ export default function Login() {
               </button>
             )}
 
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
               <button
                 onClick={() => { setMode('teacher'); setError(''); setResetMessage(null) }}
                 className="rounded-lg px-3 py-2 text-xs font-semibold text-white transition-colors"
-                style={{ backgroundColor: mode === 'teacher' ? '#166a9b' : '#1f86c7' }}
+                style={{ backgroundColor: mode === 'teacher' || mode === 'student' ? '#166a9b' : '#1f86c7' }}
               >
-                Teacher Portal
-              </button>
-              <button
-                onClick={() => { setMode('student'); setError(''); setResetMessage(null) }}
-                className="rounded-lg px-3 py-2 text-xs font-semibold transition-colors"
-                style={{ backgroundColor: mode === 'student' ? '#e6b10f' : '#ffc612', color: '#1a1a1a' }}
-              >
-                Student Portal
+                Teacher / Student Portal
               </button>
               <button
                 onClick={() => { setMode('admin'); setError(''); setResetMessage(null) }}
