@@ -212,7 +212,11 @@ export default function WeeklyPlans() {
           <div className="flex items-end">
             <p className="text-xs text-gray-400">
               {programme && (
-                <span className="inline-block px-2 py-1 rounded-full bg-blue-100 text-blue-700 font-medium">
+                <span className={`inline-block px-2 py-1 rounded-full font-medium ${
+                  programme === 'bilingual' 
+                    ? 'bg-purple-100 text-purple-700' 
+                    : 'bg-teal-100 text-teal-700'
+                }`}>
                   {programme === 'bilingual' ? 'Bilingual Programme' : 'Integrated Programme'}
                 </span>
               )}
@@ -250,45 +254,59 @@ export default function WeeklyPlans() {
         </div>
       )}
 
-      {/* Subject Cards */}
+      {/* Overall Status */}
       {selectedHomeroom && sortedClasses.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {getVisibleClasses().map(cls => {
-            const lessonCount = getLessonsForSubject(cls.subject)
-            return (
-              <div
-                key={cls.id}
-                className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all"
-                style={{ borderTopColor: '#1f86c7', borderTopWidth: 3 }}
-              >
-                <div className="font-semibold text-gray-900 text-lg">{cls.name}</div>
-                <div className="text-sm text-gray-500 mt-1">
-                  Teacher: {cls.users?.full_name || 'Unassigned'}
-                </div>
-                
-                <div className="mt-4 pt-3 border-t border-gray-100">
-                  <div className="text-xs font-medium text-gray-500 mb-2">Weekly Lessons</div>
-                  <div className="flex gap-2 flex-wrap">
+        <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Homeroom {selectedHomeroom} Weekly Plan</h3>
+              <p className="text-sm text-gray-500 mt-1">{programme === 'bilingual' ? 'Bilingual Programme' : 'Integrated Programme'}</p>
+            </div>
+            <span className="text-sm px-3 py-1.5 rounded-full font-medium bg-gray-100 text-gray-500">
+              Weekly Plan Status: Not Complete
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Weekly Plan Horizontal Table */}
+      {selectedHomeroom && sortedClasses.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="divide-y divide-gray-100">
+            {getVisibleClasses().map(cls => {
+              const lessonCount = getLessonsForSubject(cls.subject)
+              return (
+                <div key={cls.id} className="p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-4">
+                      <h4 className="font-semibold text-gray-900 w-36">{cls.subject}</h4>
+                      <span className="text-sm text-gray-500">
+                        Teacher: {cls.users?.full_name || 'Unassigned'}
+                      </span>
+                    </div>
+                    <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-500">
+                      Not Submitted
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-3">
                     {Array.from({ length: lessonCount }, (_, i) => i + 1).map(lesson => (
-                      <div
-                        key={lesson}
-                        className="w-10 h-10 rounded-lg border border-gray-200 flex items-center justify-center text-sm font-medium bg-gray-50 text-gray-400"
-                      >
-                        L{lesson}
+                      <div key={lesson} className="flex items-center gap-4">
+                        <div className="w-24 text-sm font-medium text-gray-600">
+                          Lesson #{lesson}:
+                        </div>
+                        <div className="flex-1 h-10 bg-gray-50 rounded-lg border border-gray-200 border-dashed cursor-pointer hover:border-blue-300 hover:bg-blue-50 transition-colors">
+                        </div>
+                        <span className="w-24 text-center text-xs text-gray-400">
+                          Not Submitted
+                        </span>
                       </div>
                     ))}
                   </div>
                 </div>
-                
-                <div className="mt-4 flex items-center justify-between">
-                  <span className="text-xs text-gray-400">Week {ALL_WEEKS[selectedWeek].week}</span>
-                  <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-500">
-                    Not Submitted
-                  </span>
-                </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
       )}
 
