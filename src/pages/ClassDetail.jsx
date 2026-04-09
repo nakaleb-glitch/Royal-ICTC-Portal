@@ -1923,9 +1923,9 @@ function CommentsTab({ classId, term, students, onDirtyChange }) {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="text-left px-4 py-3 text-gray-500 font-medium sticky left-0 bg-gray-50 min-w-48">Student</th>
+              <th className="text-left px-4 py-3 text-gray-500 font-medium sticky left-0 bg-gray-50 w-64 min-w-64">Student</th>
               <th className="text-left px-4 py-3 text-gray-500 font-medium">Comment</th>
-              <th className="text-center px-4 py-3 text-gray-500 font-medium min-w-28">Actions</th>
+              <th className="text-center px-4 py-3 text-gray-500 font-medium w-28 min-w-28">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
