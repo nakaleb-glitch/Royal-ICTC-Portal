@@ -16,6 +16,7 @@ export default function Dashboard() {
   const [newBehaviorReportsCount, setNewBehaviorReportsCount] = useState(0)
   const [newTeacherPasswordResetCount, setNewTeacherPasswordResetCount] = useState(0)
   const [newStudentPasswordResetCount, setNewStudentPasswordResetCount] = useState(0)
+  const [incompleteWeeklyPlanCount, setIncompleteWeeklyPlanCount] = useState(0)
   const [studentAnnouncements, setStudentAnnouncements] = useState([])
   const [studentGradedAssignments, setStudentGradedAssignments] = useState([])
   const [teacherAnnouncements, setTeacherAnnouncements] = useState([])
@@ -87,6 +88,18 @@ export default function Dashboard() {
       setNewBehaviorReportsCount(newReportsCount || 0)
       setNewTeacherPasswordResetCount(teacherResetCount)
       setNewStudentPasswordResetCount(studentResetCount)
+      
+      // Calculate incomplete weekly plan count (per homeroom)
+      // Extract unique homerooms
+      const homeroomSet = new Set()
+      classData?.forEach(cls => {
+        const homeroom = cls.name?.split(' ')[0]
+        if (homeroom) homeroomSet.add(homeroom)
+      })
+      // TODO: Once weekly plan tracking table is implemented, this will query actual completion status
+      // For now this returns 0, ready for integration
+      setIncompleteWeeklyPlanCount(0)
+      
       setLoading(false)
       return
     }
@@ -784,9 +797,14 @@ export default function Dashboard() {
               {/* Card 8 - BLUE */}
               <Link
                 to="/admin/weekly-plans"
-                className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block min-h-[120px]"
+                className="relative bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block min-h-[120px]"
                 style={{ borderTopColor: '#1f86c7', borderTopWidth: 3 }}
               >
+                {incompleteWeeklyPlanCount > 0 && (
+                  <span className="absolute top-3 right-3 min-w-[1.5rem] h-6 px-2 rounded-full bg-red-600 text-white text-xs font-semibold flex items-center justify-center">
+                    {incompleteWeeklyPlanCount}
+                  </span>
+                )}
                 <div className="font-semibold text-gray-900">Weekly Plan Management</div>
                 <div className="text-sm text-gray-500 mt-1">Monitor weekly plan completion for all classes.</div>
               </Link>
