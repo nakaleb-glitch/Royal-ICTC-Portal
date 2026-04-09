@@ -194,8 +194,8 @@ export default function WeeklyPlans() {
 
       {/* Week Selector + Class Toggles */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
-        <div className="flex items-center gap-6 flex-wrap">
-          <div className="w-64">
+        <div className="flex items-center gap-6">
+          <div className="w-64 shrink-0">
             <label className="block text-xs font-medium text-gray-500 mb-1">School Week</label>
             <select
               value={selectedWeek}
@@ -212,12 +212,12 @@ export default function WeeklyPlans() {
           
           {/* Homeroom Class Toggles */}
           {homerooms.length > 0 && (
-            <div className="flex gap-1 flex-1 overflow-x-auto">
+            <div className="flex-1 flex gap-1 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent pb-1">
               {homerooms.map(h => (
                 <button
                   key={h}
                   onClick={() => setSelectedHomeroom(h)}
-                  className={`px-4 py-2 text-sm font-medium transition-colors rounded-lg ${
+                  className={`px-4 py-2 text-sm font-medium transition-colors rounded-lg whitespace-nowrap shrink-0 ${
                     selectedHomeroom === h
                       ? 'bg-blue-600 text-white'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
