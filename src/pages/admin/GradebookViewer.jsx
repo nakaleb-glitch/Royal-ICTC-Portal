@@ -301,10 +301,6 @@ export default function GradebookViewer() {
       let progressTestSpeaking = null
 
       if (pt) {
-        // Overall progress test percentage
-        if (pt.score != null && pt.total_points > 0) {
-          progressTest = (pt.score / pt.total_points) * 100
-        }
         // ESL component percentages
         if (pt.reading_writing_score != null && pt.reading_writing_total > 0) {
           progressTestRW = (pt.reading_writing_score / pt.reading_writing_total) * 100
@@ -314,6 +310,23 @@ export default function GradebookViewer() {
         }
         if (pt.speaking_score != null && pt.speaking_total > 0) {
           progressTestSpeaking = (pt.speaking_score / pt.speaking_total) * 100
+        }
+
+        // Overall progress test percentage
+        if (selectedClass.subject === 'ESL') {
+          // For ESL: average of the three components
+          const components = []
+          if (progressTestRW != null) components.push(progressTestRW)
+          if (progressTestListening != null) components.push(progressTestListening)
+          if (progressTestSpeaking != null) components.push(progressTestSpeaking)
+          if (components.length === 3) {
+            progressTest = avg(components)
+          }
+        } else {
+          // For all other subjects: use overall score
+          if (pt.score != null && pt.total_points > 0) {
+            progressTest = (pt.score / pt.total_points) * 100
+          }
         }
       }
 
