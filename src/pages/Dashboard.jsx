@@ -1312,20 +1312,132 @@ export default function Dashboard() {
 
               <div className="bg-white rounded-xl border border-gray-200 p-5" style={{ borderTopColor: '#d1232a', borderTopWidth: 3 }}>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Behavior Report Tool</h3>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3 mb-4">
                   <button
                     type="button"
+                    onClick={() => setShowTeacherSubmissions(showTeacherSubmissions === 'create' ? null : 'create')}
                     className="py-2 px-4 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
                   >
                     Create new
                   </button>
                   <button
                     type="button"
+                    onClick={() => setShowTeacherSubmissions(showTeacherSubmissions === 'view' ? null : 'view')}
                     className="py-2 px-4 rounded-lg bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200 transition-colors"
                   >
                     View all reports
                   </button>
                 </div>
+
+                {showTeacherSubmissions === 'create' && (
+                  <form onSubmit={submitBehaviorReportInline} className="flex flex-col gap-3 mt-2 pt-4 border-t border-gray-100">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <select
+                        value={behaviorForm.class_id}
+                        onChange={async (e) => {
+                          const classId = e.target.value
+                          setBehaviorForm((prev) => ({ ...prev, class_id: classId, student_id: '' }))
+                          await fetchBehaviorStudents(classId)
+                        }}
+                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white"
+                      >
+                        <option value="">Select class</option>
+                        {classes.map((cls) => (
+                          <option key={cls.id} value={cls.id}>{cls.name}</option>
+                        ))}
+                      </select>
+                      <select
+                        value={behaviorForm.student_id}
+                        onChange={(e) => setBehaviorForm((prev) => ({ ...prev, student_id: e.target.value }))}
+                        disabled={!behaviorForm.class_id}
+                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white disabled:bg-gray-100 disabled:text-gray-400"
+                      >
+                        <option value="">{behaviorForm.class_id ? 'Select student' : 'Select class first'}</option>
+                        {behaviorStudents.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name_eng}{s.name_vn ? ` - ${s.name_vn}` : ''} ({s.student_id})
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="date"
+                        value={behaviorForm.incident_date}
+                        onChange={(e) => setBehaviorForm((prev) => ({ ...prev, incident_date: e.target.value }))}
+                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                      />
+                      <select
+                        value={behaviorForm.severity}
+                        onChange={(e) => setBehaviorForm((prev) => ({ ...prev, severity: e.target.value }))}
+                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white"
+                      >
+                        {SEVERITY_LEVELS.map((level) => (
+                          <option key={level} value={level}>{level}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <select
+                      value={behaviorForm.incident_type}
+                      onChange={(e) => setBehaviorForm((prev) => ({ ...prev, incident_type: e.target.value }))}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white"
+                    >
+                      {INCIDENT_TYPES.map((type) => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
+                    </select>
+                    <textarea
+                      value={behaviorForm.description}
+                      onChange={(e) => setBehaviorForm((prev) => ({ ...prev, description: e.target.value }))}
+                      className="w-full min-h-[8rem] rounded-lg border border-gray-300 px-3 py-2 text-sm resize-y"
+                      placeholder="Describe what happened..."
+                    />
+                    <textarea
+                      rows={2}
+                      value={behaviorForm.action_taken}
+                      onChange={(e) => setBehaviorForm((prev) => ({ ...prev, action_taken: e.target.value }))}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                      placeholder="Action taken (optional)"
+                    />
+                    {behaviorMessage && (
+                      <div className={`text-xs px-2 py-1 rounded border ${
+                        behaviorMessage.type === 'success'
+                          ? 'bg-green-50 text-green-700 border-green-200'
+                          : 'bg-red-50 text-red-700 border-red-200'
+                      }`}>
+                        {behaviorMessage.text}
+                      </div>
+                    )}
+                    <button
+                      type="submit"
+                      disabled={savingBehaviorReport}
+                      className="w-full rounded-lg bg-green-600 text-white px-4 py-2.5 text-sm font-medium hover:bg-green-700 disabled:opacity-60"
+                    >
+                      {savingBehaviorReport ? 'Submitting...' : 'Submit Report'}
+                    </button>
+                  </form>
+                )}
+
+                {showTeacherSubmissions === 'view' && (
+                  <div className="mt-2 pt-4 border-t border-gray-100 space-y-2 max-h-[20rem] overflow-y-auto">
+                    {teacherSubmittedReports.length === 0 ? (
+                      <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-500">
+                        No reports submitted yet.
+                      </div>
+                    ) : teacherSubmittedReports.map((report) => (
+                      <button
+                        key={report.id}
+                        type="button"
+                        onClick={() => setSelectedBehaviorSubmission(report)}
+                        className="w-full text-left rounded-lg border border-gray-200 bg-gray-50 px-3 py-3 hover:bg-red-50 transition-colors"
+                      >
+                        <div className="text-sm font-medium text-gray-800">{report.students?.name_eng || 'Student'}</div>
+                        <div className="text-xs text-gray-500 mt-1">{report.incident_date} • {report.incident_type} / {report.severity}</div>
+                        <div className="text-[10px] text-gray-400 mt-0.5">
+                          Status: {report.status}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="bg-white rounded-xl border border-gray-200 p-5" style={{ borderTopColor: CARD_ACCENT.deadlines, borderTopWidth: 3 }}>
