@@ -96,6 +96,8 @@ export default function ClassDetail() {
   const [postingAnnouncement, setPostingAnnouncement] = useState(false)
   const [announcementFeedback, setAnnouncementFeedback] = useState(null)
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null)
+  const [showAnnouncementForm, setShowAnnouncementForm] = useState(false)
+  const [showSentAnnouncements, setShowSentAnnouncements] = useState(false)
 
   useEffect(() => { fetchClass() }, [classId])
   useEffect(() => { fetchStudentRoster() }, [classId])
@@ -343,87 +345,128 @@ export default function ClassDetail() {
               <div className="bg-white rounded-xl border border-gray-200 p-4" style={{ borderTopColor: '#22c55e', borderTopWidth: 3 }}>
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Class Announcements</h3>
                 {profile?.role === 'teacher' && profile?.id === cls.teacher_id && (
-                  <div className="space-y-3 mb-4">
-                    <div>
-                      <label htmlFor="class-announcement-title" className="block text-xs font-medium text-gray-500 mb-1">
-                        Title
-                      </label>
-                      <input
-                        id="class-announcement-title"
-                        type="text"
-                        value={announcementTitle}
-                        onChange={(e) => setAnnouncementTitle(e.target.value)}
-                        placeholder="Short headline"
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="class-announcement-message" className="block text-xs font-medium text-gray-500 mb-1">
-                        Message
-                      </label>
-                      <textarea
-                        id="class-announcement-message"
-                        value={announcementMessage}
-                        onChange={(e) => setAnnouncementMessage(e.target.value)}
-                        placeholder="Write your class announcement..."
-                        className="w-full min-h-[8rem] max-h-[min(24rem,50vh)] rounded-lg border border-gray-300 px-3 py-2 text-sm resize-y"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="class-announcement-link" className="block text-xs font-medium text-gray-500 mb-1">
-                        Link (optional)
-                      </label>
-                      <input
-                        id="class-announcement-link"
-                        type="text"
-                        inputMode="url"
-                        autoComplete="url"
-                        value={announcementLinkUrl}
-                        onChange={(e) => setAnnouncementLinkUrl(e.target.value)}
-                        placeholder="e.g. Google Drive or class resource"
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="class-announcement-pdf" className="block text-xs font-medium text-gray-500 mb-1">
-                        PDF attachment (optional)
-                      </label>
-                      <input
-                        id="class-announcement-pdf"
-                        ref={announcementPdfInputRef}
-                        type="file"
-                        accept="application/pdf"
-                        className="block w-full text-xs text-gray-600 file:mr-2 file:rounded file:border-0 file:bg-gray-100 file:px-2 file:py-1 file:text-sm"
-                        onChange={(e) => setAnnouncementPdfFile(e.target.files?.[0] || null)}
-                      />
-                      {announcementPdfFile && (
-                        <div className="text-xs text-gray-500 mt-1 truncate max-w-full" title={announcementPdfFile.name}>
-                          {announcementPdfFile.name}
-                        </div>
-                      )}
-                    </div>
-                    {announcementFeedback && (
-                      <div
-                        className={`text-xs px-2 py-1 rounded border ${
-                          announcementFeedback.type === 'success'
-                            ? 'bg-green-50 text-green-700 border-green-200'
-                            : 'bg-red-50 text-red-700 border-red-200'
-                        }`}
-                      >
-                        {announcementFeedback.text}
-                      </div>
-                    )}
-                    <div className="flex justify-end">
+                  <>
+                    <div className="flex items-center justify-between mb-3">
                       <button
                         type="button"
-                        onClick={handlePostClassAnnouncement}
-                        disabled={postingAnnouncement}
-                        className="rounded-lg bg-green-600 text-white px-4 py-2 text-sm font-medium hover:bg-green-700 disabled:opacity-60"
+                        onClick={() => setShowAnnouncementForm(!showAnnouncementForm)}
+                        className="text-[11px] px-2 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-50"
                       >
-                        {postingAnnouncement ? 'Posting...' : 'Post Announcement'}
+                        {showAnnouncementForm ? 'Cancel' : 'Create New Announcement'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowSentAnnouncements(!showSentAnnouncements)}
+                        className="text-[11px] px-2 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-50"
+                      >
+                        {showSentAnnouncements ? 'Hide Announcements' : 'View Announcements'}
                       </button>
                     </div>
-                  </div>
+                    
+                    {showAnnouncementForm && (
+                      <div className="space-y-3 mb-4">
+                        <div>
+                          <label htmlFor="class-announcement-title" className="block text-xs font-medium text-gray-500 mb-1">
+                            Title
+                          </label>
+                          <input
+                            id="class-announcement-title"
+                            type="text"
+                            value={announcementTitle}
+                            onChange={(e) => setAnnouncementTitle(e.target.value)}
+                            placeholder="Short headline"
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="class-announcement-message" className="block text-xs font-medium text-gray-500 mb-1">
+                            Message
+                          </label>
+                          <textarea
+                            id="class-announcement-message"
+                            value={announcementMessage}
+                            onChange={(e) => setAnnouncementMessage(e.target.value)}
+                            placeholder="Write your class announcement..."
+                            className="w-full min-h-[8rem] max-h-[min(24rem,50vh)] rounded-lg border border-gray-300 px-3 py-2 text-sm resize-y"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="class-announcement-link" className="block text-xs font-medium text-gray-500 mb-1">
+                            Link (optional)
+                          </label>
+                          <input
+                            id="class-announcement-link"
+                            type="text"
+                            inputMode="url"
+                            autoComplete="url"
+                            value={announcementLinkUrl}
+                            onChange={(e) => setAnnouncementLinkUrl(e.target.value)}
+                            placeholder="e.g. Google Drive or class resource"
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="class-announcement-pdf" className="block text-xs font-medium text-gray-500 mb-1">
+                            PDF attachment (optional)
+                          </label>
+                          <input
+                            id="class-announcement-pdf"
+                            ref={announcementPdfInputRef}
+                            type="file"
+                            accept="application/pdf"
+                            className="block w-full text-xs text-gray-600 file:mr-2 file:rounded file:border-0 file:bg-gray-100 file:px-2 file:py-1 file:text-sm"
+                            onChange={(e) => setAnnouncementPdfFile(e.target.files?.[0] || null)}
+                          />
+                          {announcementPdfFile && (
+                            <div className="text-xs text-gray-500 mt-1 truncate max-w-full" title={announcementPdfFile.name}>
+                              {announcementPdfFile.name}
+                            </div>
+                          )}
+                        </div>
+                        {announcementFeedback && (
+                          <div
+                            className={`text-xs px-2 py-1 rounded border ${
+                              announcementFeedback.type === 'success'
+                                ? 'bg-green-50 text-green-700 border-green-200'
+                                : 'bg-red-50 text-red-700 border-red-200'
+                            }`}
+                          >
+                            {announcementFeedback.text}
+                          </div>
+                        )}
+                        <div className="flex justify-end">
+                          <button
+                            type="button"
+                            onClick={handlePostClassAnnouncement}
+                            disabled={postingAnnouncement}
+                            className="rounded-lg bg-green-600 text-white px-4 py-2 text-sm font-medium hover:bg-green-700 disabled:opacity-60"
+                          >
+                            {postingAnnouncement ? 'Posting...' : 'Post Announcement'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {showSentAnnouncements && (
+                      <div className="mt-3 border-t border-gray-200 pt-3 space-y-2 max-h-48 overflow-y-auto">
+                        {classAnnouncements.length === 0 ? (
+                          <div className="text-xs text-gray-500">No announcements posted yet.</div>
+                        ) : (
+                          classAnnouncements.slice(0, 8).map((item) => (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => setSelectedAnnouncement(item)}
+                              className="w-full text-left rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 hover:bg-green-50 transition-colors"
+                            >
+                              <div className="text-sm font-medium text-gray-800">{item.title}</div>
+                              <div className="text-xs text-gray-500 mt-0.5">{new Date(item.created_at).toLocaleDateString('en-GB')}</div>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </>
                 )}
                 {profile?.role === 'admin' ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
