@@ -440,7 +440,7 @@ export default function Classes() {
     <Layout>
       <button
         onClick={() => navigate('/dashboard')}
-        className="text-sm text-gray-400 hover:text-gray-600 mb-4 flex items-center gap-1"
+        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors mb-4 flex items-center gap-2"
       >
         ← Go Back
       </button>
