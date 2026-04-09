@@ -114,7 +114,8 @@ export default function EventsDeadlines() {
     <Layout>
       <button
         onClick={() => navigate('/dashboard')}
-        className="text-sm text-gray-400 hover:text-gray-600 mb-4 flex items-center gap-1"
+        className="text-white px-3 py-1.5 rounded-lg hover:opacity-90 transition-opacity mb-4 flex items-center gap-2 text-sm"
+        style={{ backgroundColor: '#1f86c7' }}
       >
         ← Go Back
       </button>

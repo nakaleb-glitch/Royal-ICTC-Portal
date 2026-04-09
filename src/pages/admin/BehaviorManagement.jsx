@@ -52,12 +52,13 @@ export default function BehaviorManagement() {
   return (
     <Layout>
       <div className="mb-8">
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="text-sm text-gray-400 hover:text-gray-600 mb-4 flex items-center gap-1"
-        >
-          ← Go Back
-        </button>
+      <button
+        onClick={() => navigate('/dashboard')}
+        className="text-white px-3 py-1.5 rounded-lg hover:opacity-90 transition-opacity mb-4 flex items-center gap-2 text-sm"
+        style={{ backgroundColor: '#1f86c7' }}
+      >
+        ← Go Back
+      </button>
         <h2 className="text-2xl font-bold text-gray-900">Behavior Management</h2>
         <p className="text-gray-500 text-sm mt-1">Review teacher-submitted behavior reports and track follow-up status.</p>
       </div>
