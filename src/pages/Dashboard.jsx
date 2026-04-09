@@ -1221,140 +1221,144 @@ export default function Dashboard() {
                     </div>
                   </>
                 )}
-                <div className="flex flex-col gap-3 flex-1 min-h-[16rem]">
-                  <div>
-                    <label htmlFor="dashboard-announcement-title" className="block text-xs font-medium text-gray-500 mb-1">
-                      Title
-                    </label>
-                    <input
-                      id="dashboard-announcement-title"
-                      type="text"
-                      value={announcementTitle}
-                      onChange={(e) => setAnnouncementTitle(e.target.value)}
-                      placeholder="Short headline"
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="dashboard-announcement-message" className="block text-xs font-medium text-gray-500 mb-1">
-                      Message
-                    </label>
-                    <textarea
-                      id="dashboard-announcement-message"
-                      value={announcementMessage}
-                      onChange={(e) => setAnnouncementMessage(e.target.value)}
-                      placeholder="Write your announcement..."
-                      className="w-full min-h-[8rem] max-h-[min(24rem,50vh)] rounded-lg border border-gray-300 px-3 py-2 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-200"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="dashboard-announcement-link" className="block text-xs font-medium text-gray-500 mb-1">
-                      Link (optional)
-                    </label>
-                    <input
-                      id="dashboard-announcement-link"
-                      type="text"
-                      inputMode="url"
-                      autoComplete="url"
-                      value={announcementLinkUrl}
-                      onChange={(e) => setAnnouncementLinkUrl(e.target.value)}
-                      placeholder="e.g. Google Drive or class resource"
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="dashboard-announcement-pdf" className="block text-xs font-medium text-gray-500 mb-1">
-                      PDF attachment (optional)
-                    </label>
-                    <input
-                      id="dashboard-announcement-pdf"
-                      ref={announcementPdfInputRef}
-                      type="file"
-                      accept="application/pdf"
-                      className="block w-full text-xs text-gray-600 file:mr-2 file:rounded file:border-0 file:bg-gray-100 file:px-2 file:py-1 file:text-sm"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0] || null
-                        setAnnouncementPdfFile(f)
-                      }}
-                    />
-                    {announcementPdfFile && (
-                      <div className="text-xs text-gray-500 mt-1 truncate" title={announcementPdfFile.name}>
-                        {announcementPdfFile.name}
+
+                {showTeacherAnnouncements === 'create' && (
+                  <div className="flex flex-col gap-3 flex-1 min-h-[16rem]">
+                    <div>
+                      <label htmlFor="dashboard-announcement-title" className="block text-xs font-medium text-gray-500 mb-1">
+                        Title
+                      </label>
+                      <input
+                        id="dashboard-announcement-title"
+                        type="text"
+                        value={announcementTitle}
+                        onChange={(e) => setAnnouncementTitle(e.target.value)}
+                        placeholder="Short headline"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="dashboard-announcement-message" className="block text-xs font-medium text-gray-500 mb-1">
+                        Message
+                      </label>
+                      <textarea
+                        id="dashboard-announcement-message"
+                        value={announcementMessage}
+                        onChange={(e) => setAnnouncementMessage(e.target.value)}
+                        placeholder="Write your announcement..."
+                        className="w-full min-h-[8rem] max-h-[min(24rem,50vh)] rounded-lg border border-gray-300 px-3 py-2 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-200"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="dashboard-announcement-link" className="block text-xs font-medium text-gray-500 mb-1">
+                        Link (optional)
+                      </label>
+                      <input
+                        id="dashboard-announcement-link"
+                        type="text"
+                        inputMode="url"
+                        autoComplete="url"
+                        value={announcementLinkUrl}
+                        onChange={(e) => setAnnouncementLinkUrl(e.target.value)}
+                        placeholder="e.g. Google Drive or class resource"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="dashboard-announcement-pdf" className="block text-xs font-medium text-gray-500 mb-1">
+                        PDF attachment (optional)
+                      </label>
+                      <input
+                        id="dashboard-announcement-pdf"
+                        ref={announcementPdfInputRef}
+                        type="file"
+                        accept="application/pdf"
+                        className="block w-full text-xs text-gray-600 file:mr-2 file:rounded file:border-0 file:bg-gray-100 file:px-2 file:py-1 file:text-sm"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0] || null
+                          setAnnouncementPdfFile(f)
+                        }}
+                      />
+                      {announcementPdfFile && (
+                        <div className="text-xs text-gray-500 mt-1 truncate" title={announcementPdfFile.name}>
+                          {announcementPdfFile.name}
+                        </div>
+                      )}
+                    </div>
+                    {announcementFeedback && (
+                      <div
+                        className={`text-xs px-2 py-1 rounded border ${
+                          announcementFeedback.type === 'success'
+                            ? 'bg-green-50 text-green-700 border-green-200'
+                            : 'bg-red-50 text-red-700 border-red-200'
+                        }`}
+                      >
+                        {announcementFeedback.text}
+                      </div>
+                    )}
+                    <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+                      <div className="flex-1 min-w-0">
+                        <label htmlFor="dashboard-announcement-scope" className="block text-xs font-medium text-gray-500 mb-1">
+                          Audience
+                        </label>
+                        <select
+                          id="dashboard-announcement-scope"
+                          value={announcementScope}
+                          onChange={(e) => {
+                            setAnnouncementScope(e.target.value)
+                            if (e.target.value === 'all_my_classes') {
+                              setAnnouncementClassIds([])
+                            }
+                          }}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white"
+                        >
+                          <option value="all_my_classes">All my classes</option>
+                          <option value="selected_classes">Selected classes</option>
+                        </select>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => postTeacherAnnouncement()}
+                        disabled={postingAnnouncement}
+                        className="w-full sm:w-auto shrink-0 rounded-lg bg-green-600 text-white px-4 py-2 text-sm font-medium hover:bg-green-700 disabled:opacity-60"
+                      >
+                        {postingAnnouncement ? 'Posting...' : 'Post Announcement'}
+                      </button>
+                    </div>
+                    {announcementScope === 'selected_classes' && (
+                      <div className="rounded-lg border border-gray-200 bg-gray-50 p-2 max-h-28 overflow-y-auto">
+                        {classes.length === 0 ? (
+                          <div className="text-xs text-gray-500">No classes available.</div>
+                        ) : (
+                          classes.map((cls) => (
+                            <label key={cls.id} className="flex items-center gap-2 py-1 text-xs text-gray-700">
+                              <input
+                                type="checkbox"
+                                checked={announcementClassIds.includes(cls.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setAnnouncementClassIds((prev) => [...prev, cls.id])
+                                  } else {
+                                    setAnnouncementClassIds((prev) => prev.filter((id) => id !== cls.id))
+                                  }
+                                }}
+                              />
+                              <span>{cls.name}</span>
+                            </label>
+                          ))
+                        )}
                       </div>
                     )}
                   </div>
-                  {announcementFeedback && (
-                    <div
-                      className={`text-xs px-2 py-1 rounded border ${
-                        announcementFeedback.type === 'success'
-                          ? 'bg-green-50 text-green-700 border-green-200'
-                          : 'bg-red-50 text-red-700 border-red-200'
-                      }`}
-                    >
-                      {announcementFeedback.text}
-                    </div>
-                  )}
-                  <div className="flex flex-col sm:flex-row sm:items-end gap-3">
-                    <div className="flex-1 min-w-0">
-                      <label htmlFor="dashboard-announcement-scope" className="block text-xs font-medium text-gray-500 mb-1">
-                        Audience
-                      </label>
-                      <select
-                        id="dashboard-announcement-scope"
-                        value={announcementScope}
-                        onChange={(e) => {
-                          setAnnouncementScope(e.target.value)
-                          if (e.target.value === 'all_my_classes') {
-                            setAnnouncementClassIds([])
-                          }
-                        }}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white"
-                      >
-                        <option value="all_my_classes">All my classes</option>
-                        <option value="selected_classes">Selected classes</option>
-                      </select>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => postTeacherAnnouncement()}
-                      disabled={postingAnnouncement}
-                      className="w-full sm:w-auto shrink-0 rounded-lg bg-green-600 text-white px-4 py-2 text-sm font-medium hover:bg-green-700 disabled:opacity-60"
-                    >
-                      {postingAnnouncement ? 'Posting...' : 'Post Announcement'}
-                    </button>
-                  </div>
-                  {announcementScope === 'selected_classes' && (
-                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-2 max-h-28 overflow-y-auto">
-                      {classes.length === 0 ? (
-                        <div className="text-xs text-gray-500">No classes available.</div>
-                      ) : (
-                        classes.map((cls) => (
-                          <label key={cls.id} className="flex items-center gap-2 py-1 text-xs text-gray-700">
-                            <input
-                              type="checkbox"
-                              checked={announcementClassIds.includes(cls.id)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setAnnouncementClassIds((prev) => [...prev, cls.id])
-                                } else {
-                                  setAnnouncementClassIds((prev) => prev.filter((id) => id !== cls.id))
-                                }
-                              }}
-                            />
-                            <span>{cls.name}</span>
-                          </label>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </div>
-                {showTeacherAnnouncements && (
-                  <div className="mt-3 border-t border-gray-200 pt-3 space-y-2 max-h-48 overflow-y-auto">
+                )}
+
+                {showTeacherAnnouncements === 'view' && (
+                  <div className="mt-0 space-y-2 max-h-[20rem] overflow-y-auto">
                     {teacherAnnouncements.length === 0 ? (
                       <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-500">
                         No announcements posted yet.
                       </div>
-                    ) : teacherAnnouncements.slice(0, 8).map((item) => (
+                    ) : teacherAnnouncements.map((item) => (
                       <button
                         key={item.id}
                         type="button"
@@ -1369,10 +1373,13 @@ export default function Dashboard() {
                           attachment_url: item.attachment_url,
                           attachment_name: item.attachment_name,
                         })}
-                        className="w-full text-left rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 hover:bg-green-50 transition-colors"
+                        className="w-full text-left rounded-lg border border-gray-200 bg-gray-50 px-3 py-3 hover:bg-green-50 transition-colors"
                       >
                         <div className="text-sm font-medium text-gray-800">{item.title}</div>
-                        <div className="text-xs text-gray-500 mt-0.5">{formatDateWithDay(item.created_at)}</div>
+                        <div className="text-xs text-gray-500 mt-1">{formatDateWithDay(item.created_at)}</div>
+                        <div className="text-[10px] text-gray-400 mt-0.5">
+                          Sent to: {item.targets.map((t) => t.class_name).join(', ')}
+                        </div>
                       </button>
                     ))}
                   </div>
