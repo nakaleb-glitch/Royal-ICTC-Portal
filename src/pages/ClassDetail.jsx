@@ -1458,12 +1458,12 @@ function ProgressTestTab({ classId, term, students, isESL, onDirtyChange }) {
               <th className="text-left px-4 py-3 text-gray-500 font-medium sticky left-0 bg-gray-50 min-w-48">Student</th>
               {isESL ? (
                 <>
-                  <th className="text-center px-3 py-3 font-medium min-w-36 bg-gray-200 text-gray-700">R/W Score</th>
-                  <th className="text-center px-3 py-3 font-medium min-w-32 bg-gray-200 text-gray-700">Listening Score</th>
-                  <th className="text-center px-3 py-3 font-medium min-w-32 bg-gray-200 text-gray-700">Speaking Score</th>
-                  <th className="text-center px-3 py-3 font-medium min-w-36 bg-green-100 text-green-800">R/W %</th>
-                  <th className="text-center px-3 py-3 font-medium min-w-32 bg-green-100 text-green-800">Listening %</th>
-                  <th className="text-center px-3 py-3 font-medium min-w-32 bg-green-100 text-green-800">Speaking %</th>
+              <th className="text-center px-3 py-3 font-medium min-w-36 bg-gray-200 text-gray-700 border-l border-gray-200">R/W Score</th>
+              <th className="text-center px-3 py-3 font-medium min-w-32 bg-gray-200 text-gray-700 border-l border-gray-200">Listening Score</th>
+              <th className="text-center px-3 py-3 font-medium min-w-32 bg-gray-200 text-gray-700 border-l border-gray-200">Speaking Score</th>
+              <th className="text-center px-3 py-3 font-medium min-w-36 bg-green-100 text-green-800 border-l border-gray-200">R/W %</th>
+              <th className="text-center px-3 py-3 font-medium min-w-32 bg-green-100 text-green-800 border-l border-gray-200">Listening %</th>
+              <th className="text-center px-3 py-3 font-medium min-w-32 bg-green-100 text-green-800 border-l border-gray-200">Speaking %</th>
                 </>
               ) : (
                 <th className="text-center px-3 py-3 text-gray-500 font-medium min-w-32">Score {totals.total_points ? `/ ${totals.total_points}` : ''}</th>
@@ -1487,12 +1487,12 @@ function ProgressTestTab({ classId, term, students, isESL, onDirtyChange }) {
                   </td>
                   {isESL ? (
                     <>
-                      <td className="px-3 py-2 text-center bg-gray-50">
-                        <div className="flex flex-col items-center gap-1">
-                          <input type="number" min="0" max={totals.rw_total || undefined} placeholder="—"
-                            value={g.rw ?? ''}
-                            onChange={e => setGrade(student.id, 'rw', e.target.value)}
-                            className="w-20 text-center border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <td className="px-3 py-2 text-center bg-gray-50 border-l border-gray-200">
+                      <div className="flex flex-col items-center gap-1">
+                        <input type="number" min="0" max={totals.rw_total || undefined} placeholder="—"
+                          value={g.rw ?? ''}
+                          onChange={e => setGrade(student.id, 'rw', e.target.value)}
+                          className="w-20 text-center border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                           {openCommentStudentId === student.id ? (
                             <div className="w-full space-y-1">
                               <input
@@ -1537,29 +1537,29 @@ function ProgressTestTab({ classId, term, students, isESL, onDirtyChange }) {
                           )}
                         </div>
                       </td>
-                      <td className="px-3 py-2 text-center">
+                      <td className="px-3 py-2 text-center bg-gray-50 border-l border-gray-200">
                         <input type="number" min="0" max={totals.l_total || undefined} placeholder="—"
                           value={g.l ?? ''}
                           onChange={e => setGrade(student.id, 'l', e.target.value)}
                           className="w-20 text-center border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                       </td>
-                      <td className="px-3 py-2 text-center bg-gray-50">
+                      <td className="px-3 py-2 text-center bg-gray-50 border-l border-gray-200">
                         <input type="number" min="0" max={totals.s_total || undefined} placeholder="—"
                           value={g.s ?? ''}
                           onChange={e => setGrade(student.id, 's', e.target.value)}
                           className="w-20 text-center border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                       </td>
-                      <td className="px-4 py-3 text-center bg-green-50">
+                      <td className="px-4 py-3 text-center bg-green-50 border-l border-gray-200">
                         <span className="font-semibold text-gray-700">
                           {totals.rw_total && g.rw != null ? fmt(pct(parseFloat(g.rw), parseFloat(totals.rw_total))) : '—'}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-center bg-green-50">
+                      <td className="px-4 py-3 text-center bg-green-50 border-l border-gray-200">
                         <span className="font-semibold text-gray-700">
                           {totals.l_total && g.l != null ? fmt(pct(parseFloat(g.l), parseFloat(totals.l_total))) : '—'}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-center bg-green-50">
+                      <td className="px-4 py-3 text-center bg-green-50 border-l border-gray-200">
                         <span className="font-semibold text-gray-700">
                           {totals.s_total && g.s != null ? fmt(pct(parseFloat(g.s), parseFloat(totals.s_total))) : '—'}
                         </span>
@@ -1909,7 +1909,7 @@ function SummaryTab({ classId, term, students, isESL }) {
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-200">
               {students.map(student => {
                 const d = data[student.id] || {}
                 const attrs = attributes[student.id] || {}
