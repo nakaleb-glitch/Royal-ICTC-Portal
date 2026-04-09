@@ -700,7 +700,7 @@ export default function Dashboard() {
               {/* Card 1 - RED */}
               <Link
                 to="/admin/students"
-                className="relative bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block"
+                className="relative bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block min-h-[120px]"
                 style={{ borderTopColor: '#d1232a', borderTopWidth: 3 }}
               >
                 {newStudentPasswordResetCount > 0 && (
@@ -714,7 +714,7 @@ export default function Dashboard() {
               {/* Card 2 - BLUE */}
               <Link
                 to="/admin/classes"
-                className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block"
+                className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block min-h-[120px]"
                 style={{ borderTopColor: '#1f86c7', borderTopWidth: 3 }}
               >
                 <div className="font-semibold text-gray-900">Class Management</div>
@@ -723,7 +723,7 @@ export default function Dashboard() {
               {/* Card 3 - YELLOW */}
               <Link
                 to="/admin/users"
-                className="relative bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block"
+                className="relative bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block min-h-[120px]"
                 style={{ borderTopColor: '#ffc612', borderTopWidth: 3 }}
               >
                 {newTeacherPasswordResetCount > 0 && (
@@ -737,7 +737,7 @@ export default function Dashboard() {
               {/* Card 4 - RED */}
               <Link
                 to="/admin/resources"
-                className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block"
+                className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block min-h-[120px]"
                 style={{ borderTopColor: '#d1232a', borderTopWidth: 3 }}
               >
                 <div className="font-semibold text-gray-900">Resource Management</div>
@@ -746,7 +746,7 @@ export default function Dashboard() {
               {/* Card 5 - BLUE */}
               <Link
                 to="/admin/events-deadlines"
-                className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block"
+                className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block min-h-[120px]"
                 style={{ borderTopColor: '#1f86c7', borderTopWidth: 3 }}
               >
                 <div className="font-semibold text-gray-900">Event & Admin Deadline Management</div>
@@ -755,7 +755,7 @@ export default function Dashboard() {
               {/* Card 6 - YELLOW */}
               <Link
                 to="/admin/behavior-management"
-                className="relative bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block"
+                className="relative bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block min-h-[120px]"
                 style={{ borderTopColor: '#ffc612', borderTopWidth: 3 }}
               >
                 {newBehaviorReportsCount > 0 && (
@@ -769,7 +769,7 @@ export default function Dashboard() {
               {/* Card 7 - RED */}
               <Link
                 to="/admin/gradebooks"
-                className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block"
+                className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block min-h-[120px]"
                 style={{ borderTopColor: '#d1232a', borderTopWidth: 3 }}
                 onClick={e => {
                   const hasUnsaved = sessionStorage.getItem('gradebook_unsaved_changes') === '1'
@@ -784,7 +784,7 @@ export default function Dashboard() {
               {/* Card 8 - BLUE */}
               <Link
                 to="/admin/weekly-plans"
-                className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block"
+                className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block min-h-[120px]"
                 style={{ borderTopColor: '#1f86c7', borderTopWidth: 3 }}
               >
                 <div className="font-semibold text-gray-900">Weekly Plan Management</div>
