@@ -57,6 +57,8 @@ export default function GradebookViewer() {
   const [studentData, setStudentData] = useState([])
   const [programme, setProgramme] = useState('')
   const [attributeNames, setAttributeNames] = useState([])
+  const [activeTab, setActiveTab] = useState('summary')
+  const [comments, setComments] = useState({})
 
   // Fetch unique homerooms
   useEffect(() => {
@@ -165,8 +167,8 @@ export default function GradebookViewer() {
     // Get unique attribute names and sort them
     const uniqueAttributes = [...new Set(data?.map(d => d.attribute) || [])]
     
-    // If no attributes found, use fallback hardcoded names
-    const fallbackAttributes = ['Communication', 'Collaboration', 'Organisation', 'Critical Thinking', 'Creative']
+    // If no attributes found, use standard attribute names
+    const fallbackAttributes = ['Confident', 'Responsible', 'Reflective', 'Innovative', 'Engaged']
     setAttributeNames(uniqueAttributes.length > 0 ? uniqueAttributes : fallbackAttributes)
   }
 
@@ -237,6 +239,21 @@ export default function GradebookViewer() {
       .eq('term', selectedTerm)
       .in('student_id', studentIds)
 
+    // Fetch comments for this class (only for final terms)
+    const { data: commentsData } = await supabase
+      .from('gradebook_comments')
+      .select('student_id, comment')
+      .eq('class_id', selectedSubject)
+      .eq('term', selectedTerm)
+      .in('student_id', studentIds)
+
+    // Organize comments by student
+    const commentMap = {}
+    commentsData?.forEach(c => {
+      commentMap[c.student_id] = c.comment
+    })
+    setComments(commentMap)
+
     // Organize data by student
     const studentMap = {}
     studentData?.forEach(student => {
@@ -290,7 +307,8 @@ export default function GradebookViewer() {
 
     // Calculate totals and format data
     const formattedData = Object.values(studentMap).map(({ student, participation, assignments, progressTest, attributes }) => {
-      const participationAvg = avg(participation)
+      // Convert participation from /10 to percentage
+      const participationAvg = avg(participation) != null ? avg(participation) * 10 : null
       // Calculate assignment average only from graded assignments (exclude missing)
       const assignmentAvg = assignments.max > 0 ? (assignments.total / assignments.max) * 100 : null
       const progressTestAvg = avg(progressTest)
@@ -422,7 +440,7 @@ export default function GradebookViewer() {
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
                       <th className="text-left px-4 py-3 text-gray-500 font-medium sticky left-0 bg-gray-50">Student</th>
-                      <th className="text-center px-4 py-3 text-gray-500 font-medium">Participation (20%)</th>
+                      <th className="text-center px-4 py-3 text-gray-500 font-medium">Participation %</th>
                       <th className="text-center px-4 py-3 text-gray-500 font-medium">Marked Assignments (80%)</th>
                       <th className="text-center px-4 py-3 text-gray-500 font-medium">Attainment</th>
                       <th className="text-center px-4 py-3 text-gray-500 font-medium">Progress Test</th>
@@ -447,7 +465,16 @@ export default function GradebookViewer() {
                           <div className="text-xs text-gray-400">{student.student_id || '—'}</div>
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <span className="text-gray-600">{fmt(participation)}</span>
+                          <span className={`font-semibold ${
+                            participation != null 
+                              ? participation >= 80 ? 'text-green-600' 
+                              : participation >= 65 ? 'text-blue-600'
+                              : participation >= 50 ? 'text-amber-600'
+                              : 'text-red-600'
+                              : 'text-gray-300'
+                          }`}>
+                            {participation != null ? `${fmt(participation)}%` : '—'}
+                          </span>
                         </td>
                         <td className="px-4 py-3 text-center">
                           <span className="text-gray-600">{fmt(attainment)}%</span>
