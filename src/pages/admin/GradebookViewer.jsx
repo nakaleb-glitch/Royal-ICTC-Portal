@@ -146,12 +146,12 @@ export default function GradebookViewer() {
     }
   }, [selectedHomeroom, selectedTerm])
 
-  // Load subject specific data when subject changes
+  // Load subject specific data when subject changes AND students are loaded
   useEffect(() => {
-    if (selectedHomeroom && selectedTerm && selectedSubject) {
+    if (selectedHomeroom && selectedTerm && selectedSubject && studentData.length > 0) {
       fetchStudentGradesForSubject()
     }
-  }, [selectedHomeroom, selectedTerm, selectedSubject])
+  }, [selectedHomeroom, selectedTerm, selectedSubject, studentData.length])
 
   const fetchStandardAttributeNames = async () => {
     // Always use standard consistent attributes across all subjects
