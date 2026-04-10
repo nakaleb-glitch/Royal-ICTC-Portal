@@ -285,7 +285,7 @@ export default function ClassDetail() {
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
              {/* Student List */}
-             <div className="lg:col-span-4 bg-white rounded-xl border border-gray-200 overflow-hidden" style={{ borderTopColor: '#1f86c7', borderTopWidth: 3 }}>
+             <div className="lg:col-span-3 bg-white rounded-xl border border-gray-200 overflow-hidden" style={{ borderTopColor: '#1f86c7', borderTopWidth: 3 }}>
               <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">Student List</h3>
                 <span className="text-xs text-gray-500">{studentRoster.length} students</span>
@@ -297,26 +297,26 @@ export default function ClassDetail() {
                   <table className="w-full text-sm">
                       <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
                         <tr>
-                          <th className="text-left px-4 py-3 text-gray-500 font-medium w-[80px]"></th>
-                          <th className="text-left px-4 py-3 text-gray-500 font-medium">Student ID</th>
-                          <th className="text-left px-4 py-3 text-gray-500 font-medium">Student Name (ENG - VN)</th>
+                          <th className="text-left px-3 py-3 text-gray-500 font-medium w-[80px]">Student ID</th>
+                          <th className="text-left px-3 py-3 text-gray-500 font-medium">Student Name</th>
+                          <th className="text-left px-3 py-3 text-gray-500 font-medium w-[40px]"></th>
                         </tr>
                       </thead>
                     <tbody className="divide-y divide-gray-300">
                       {studentRoster.map(student => (
                         <tr key={student.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3">
+                          <td className="px-3 py-3 text-gray-600">{student.student_id || '—'}</td>
+                          <td className="px-3 py-3 font-medium">
+                            <span className="text-gray-900">{student.name_eng || '—'}</span>
+                            <span className="text-gray-400 px-1">-</span>
+                            <span className="text-blue-700">{student.name_vn || '—'}</span>
+                          </td>
+                          <td className="px-3 py-3">
                             <ProfileAvatar 
                               avatarUrl={student.avatar_url} 
                               name={student.name_eng} 
                               size={32}
                             />
-                          </td>
-                          <td className="px-4 py-3 text-gray-600">{student.student_id || '—'}</td>
-                          <td className="px-4 py-3 font-medium">
-                            <span className="text-gray-900">{student.name_eng || '—'}</span>
-                            <span className="text-gray-400 px-1">-</span>
-                            <span className="text-blue-700">{student.name_vn || '—'}</span>
                           </td>
                         </tr>
                       ))}
@@ -326,7 +326,7 @@ export default function ClassDetail() {
               )}
             </div>
 
-            <div className="lg:col-span-7 space-y-4">
+            <div className="lg:col-span-8 space-y-4">
               {/* Gradebooks Section */}
               <div className="bg-white rounded-xl border border-gray-200 p-4" style={{ borderTopColor: '#d1232a', borderTopWidth: 3 }}>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Gradebooks</h3>
