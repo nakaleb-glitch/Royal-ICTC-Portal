@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import Layout from '../../components/Layout'
+import ProfileAvatar from '../../components/ProfileAvatar'
 import Papa from 'papaparse'
 import { useNavigate } from 'react-router-dom'
 
@@ -885,6 +886,7 @@ export default function Students() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
+                <th className="text-left px-4 py-3 text-gray-500 font-medium"></th>
                 <th className="text-left px-6 py-3 text-gray-500 font-medium">Student ID</th>
                 <th className="text-left px-6 py-3 text-gray-500 font-medium">English Name</th>
                 <th className="text-left px-6 py-3 text-gray-500 font-medium">Vietnamese Name</th>
@@ -902,6 +904,9 @@ export default function Students() {
                 const isRowEditing = rowEditingId === student.id
                 return (
                 <tr key={student.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3">
+                    <ProfileAvatar user={student} size={36} />
+                  </td>
                   <td className="px-6 py-3 text-gray-600">
                     <span className="inline-flex items-center gap-2">
                       <span
