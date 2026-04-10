@@ -905,7 +905,11 @@ export default function Students() {
                 return (
                 <tr key={student.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3">
-                    <ProfileAvatar user={student} size={36} />
+                    <ProfileAvatar 
+                      avatarUrl={student.avatar_url} 
+                      name={student.name_eng} 
+                      size={36} 
+                    />
                   </td>
                   <td className="px-6 py-3 text-gray-600">
                     <span className="inline-flex items-center gap-2">
