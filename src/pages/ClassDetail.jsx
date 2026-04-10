@@ -1476,7 +1476,8 @@ function ProgressTestTab({ classId, term, students, isESL, onDirtyChange }) {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="text-left px-4 py-3 text-gray-500 font-medium sticky left-0 bg-gray-50 min-w-48"></th>
+              <th className="text-left px-3 py-3 text-gray-500 font-medium sticky left-0 bg-gray-50 w-16"></th>
+              <th colSpan={2} className="text-left px-4 py-3 text-gray-500 font-medium bg-gray-50 min-w-48"></th>
               {isESL ? (
                 <>
               <th colSpan={3} className="text-center px-3 py-2 font-medium bg-gray-200 text-gray-800 border-l border-gray-300" style={{ backgroundClip: 'padding-box' }}>Progress Test - Scores</th>
@@ -1490,7 +1491,8 @@ function ProgressTestTab({ classId, term, students, isESL, onDirtyChange }) {
               )}
             </tr>
             <tr>
-              <th className="text-left px-4 py-3 text-gray-500 font-medium sticky left-0 bg-gray-50 min-w-48">Student</th>
+              <th className="text-left px-3 py-3 text-gray-500 font-medium sticky left-0 bg-gray-50 w-16"></th>
+              <th colSpan={2} className="text-left px-4 py-3 text-gray-500 font-medium bg-gray-50 min-w-48">Student</th>
               {isESL ? (
                 <>
               <th className="text-center px-3 py-3 font-medium min-w-36 bg-gray-200 text-gray-700 border-l border-gray-200">Reading & Writing</th>
@@ -1512,7 +1514,14 @@ function ProgressTestTab({ classId, term, students, isESL, onDirtyChange }) {
               const overall = getOverall(student.id)
               return (
                 <tr key={student.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 sticky left-0 bg-white">
+                  <td className="px-3 py-3 sticky left-0 bg-white">
+                    <ProfileAvatar 
+                      avatarUrl={student.avatar_url} 
+                      name={student.name_eng} 
+                      size={28} 
+                    />
+                  </td>
+                  <td className="px-4 py-3 bg-white">
                     <div className="font-medium">
                       <span className="text-gray-900">{student.name_eng || '—'}</span>
                       <span className="text-gray-400 px-1">-</span>
@@ -1852,7 +1861,8 @@ function StudentAttributesTab({ classId, term, students, onDirtyChange }) {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="text-left px-4 py-3 text-gray-500 font-medium sticky left-0 bg-gray-50 min-w-48">Student</th>
+              <th className="text-left px-3 py-3 text-gray-500 font-medium sticky left-0 bg-gray-50 w-16"></th>
+              <th colSpan={2} className="text-left px-4 py-3 text-gray-500 font-medium bg-gray-50 min-w-48">Student</th>
               {ATTRIBUTE_FIELDS.map(field => (
                 <th key={field.key} className="text-center px-3 py-3 font-medium min-w-44 border-l border-gray-300 bg-blue-100 text-blue-800" style={{ backgroundClip: 'padding-box' }}>
                   {field.label}
@@ -1865,7 +1875,14 @@ function StudentAttributesTab({ classId, term, students, onDirtyChange }) {
               const row = attributes[student.id] || {}
               return (
                 <tr key={student.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 sticky left-0 bg-white">
+                  <td className="px-3 py-3 sticky left-0 bg-white">
+                    <ProfileAvatar 
+                      avatarUrl={student.avatar_url} 
+                      name={student.name_eng} 
+                      size={28} 
+                    />
+                  </td>
+                  <td className="px-4 py-3 bg-white">
                     <div className="font-medium">
                       <span className="text-gray-900">{student.name_eng || '—'}</span>
                       <span className="text-gray-400 px-1">-</span>
@@ -2044,8 +2061,9 @@ function SummaryTab({ classId, term, students, isESL }) {
         <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
           <table className="w-full text-sm border-collapse">
             <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="text-left px-4 py-3 text-gray-500 font-medium sticky left-0 bg-gray-50 min-w-48">Student</th>
+            <tr>
+              <th className="text-left px-3 py-3 text-gray-500 font-medium sticky left-0 bg-gray-50 w-16"></th>
+              <th colSpan={2} className="text-left px-4 py-3 text-gray-500 font-medium bg-gray-50 min-w-48">Student</th>
                 <th className="text-center px-4 py-3 font-medium bg-gray-200 text-gray-700">Participation</th>
                 <th className="text-center px-4 py-3 font-medium bg-gray-200 text-gray-700 border-l border-gray-200">Marked Assignments</th>
                 <th className="text-center px-4 py-3 font-medium bg-green-100 text-green-800 border-l border-gray-200">Attainment</th>
@@ -2075,7 +2093,14 @@ function SummaryTab({ classId, term, students, isESL }) {
                 const attrs = attributes[student.id] || {}
                 return (
                   <tr key={student.id} className="hover:bg-gray-50 border-b border-gray-200">
-                    <td className="px-4 py-3 sticky left-0 bg-white">
+                    <td className="px-3 py-3 sticky left-0 bg-white">
+                    <ProfileAvatar 
+                      avatarUrl={student.avatar_url} 
+                      name={student.name_eng} 
+                      size={28} 
+                    />
+                  </td>
+                  <td className="px-4 py-3 bg-white">
                       <div className="font-medium">
                         <span className="text-gray-900">{student.name_eng || '—'}</span>
                         <span className="text-gray-400 px-1">-</span>
@@ -2180,7 +2205,8 @@ function CommentsTab({ classId, term, students, onDirtyChange }) {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="text-left px-4 py-3 text-gray-500 font-medium sticky left-0 bg-gray-50 w-64 min-w-64">Student</th>
+              <th className="text-left px-3 py-3 text-gray-500 font-medium sticky left-0 bg-gray-50 w-16"></th>
+              <th colSpan={2} className="text-left px-4 py-3 text-gray-500 font-medium bg-gray-50 w-64 min-w-64">Student</th>
               <th className="text-left px-4 py-3 text-gray-500 font-medium">Comment</th>
               <th className="text-center px-4 py-3 text-gray-500 font-medium w-28 min-w-28">Actions</th>
             </tr>
@@ -2188,7 +2214,14 @@ function CommentsTab({ classId, term, students, onDirtyChange }) {
           <tbody className="divide-y divide-gray-100">
             {students.map(student => (
               <tr key={student.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 sticky left-0 bg-white">
+                <td className="px-3 py-3 sticky left-0 bg-white">
+                  <ProfileAvatar 
+                    avatarUrl={student.avatar_url} 
+                    name={student.name_eng} 
+                    size={28} 
+                  />
+                </td>
+                <td className="px-4 py-3 bg-white">
                   <div className="font-medium">
                     <span className="text-gray-900">{student.name_eng || '—'}</span>
                     <span className="text-gray-400 px-1">-</span>
