@@ -106,11 +106,22 @@ export default function ClassDetail() {
   useEffect(() => {
     const updateWeek = () => {
       // Admin debug override takes highest priority
-      let w = window.localStorage.getItem('debug_current_week')
-      if (w == null) {
-        w = window.sessionStorage.getItem('current_week_number') || 0
+      let w
+
+      const debugVal = window.localStorage.getItem('debug_current_week')
+      if (debugVal != null && debugVal !== '') {
+        w = parseInt(debugVal, 10)
+      } else {
+        const navVal = window.sessionStorage.getItem('current_week_number')
+        w = navVal != null ? parseInt(navVal, 10) : 0
       }
-      setActiveWeek(parseInt(w, 10))
+
+      // Fallback to 0 for invalid numbers
+      if (Number.isNaN(w) || w < 0 || w > 40) {
+        w = 0
+      }
+
+      setActiveWeek(w)
     }
 
     updateWeek()
