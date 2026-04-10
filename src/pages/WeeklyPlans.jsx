@@ -305,7 +305,7 @@ export default function WeeklyPlans() {
 
   // Check if user can edit this class
   const canEditClass = (cls) => {
-    if (isAdmin) return false // admin can not edit, only view
+    if (isAdmin) return true // admin has full edit permissions
     if (!profile?.id) return false
     return cls.teacher_id === profile.id
   }
