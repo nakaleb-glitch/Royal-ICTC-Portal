@@ -134,11 +134,21 @@ export default function ClassDetail() {
     // Always get fresh value when this function runs - using EXACT SAME KEY as navigation bar!
     let week
 
+    // ✅ EXACT SAME LOGIC AS IN LAYOUT.JSX - this fixes the ReferenceError
     const debugVal = window.sessionStorage.getItem('debug_week_override')
-    if (debugVal != null && debugVal !== '') {
-      week = parseInt(debugVal, 10)
+    if (debugVal !== null) {
+      week = Number(debugVal)
+      if (week >= 0 && week < 40) {
+        // valid range
+      } else {
+        week = 0
+      }
     } else {
-      week = getCurrentWeekIndex()
+      const today = new Date()
+      if (today < new Date('2026-08-17')) return 0
+      
+      // Default fallback
+      week = 0
     }
 
     if (Number.isNaN(week) || week < 0 || week > 40) {
