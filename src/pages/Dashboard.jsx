@@ -168,16 +168,27 @@ export default function Dashboard() {
       setNewTeacherPasswordResetCount(teacherResetCount)
       setNewStudentPasswordResetCount(studentResetCount)
       
-      // Calculate incomplete weekly plan count (per homeroom)
-      // Extract unique homerooms
-      const homeroomSet = new Set()
+      // Calculate incomplete weekly plan count
+      const currentWeek = getCurrentWeekIndex()
+      
+      // Count how many unique (class, week) combinations are missing
+      const { count: submittedCount } = await supabase
+        .from('weekly_plan_lessons')
+        .select('id', { count: 'exact', head: true })
+        .eq('week', currentWeek)
+        .eq('status', 'submitted')
+      
+      // Total required lessons = sum of lessons per class for current week
+      let totalRequired = 0
       classData?.forEach(cls => {
-        const homeroom = cls.name?.split(' ')[0]
-        if (homeroom) homeroomSet.add(homeroom)
+        if (cls.subject === 'ESL') totalRequired += cls.programme === 'integrated' ? 6 : 4
+        else if (cls.subject === 'Mathematics' || cls.subject === 'Science') totalRequired += cls.programme === 'bilingual' ? 3 : 2
+        else if (cls.subject === 'Global Perspectives') totalRequired += 1
+        else totalRequired += 1
       })
-      // TODO: Once weekly plan tracking table is implemented, this will query actual completion status
-      // For now this returns 0, ready for integration
-      setIncompleteWeeklyPlanCount(0)
+      
+      const incompleteCount = totalRequired - (submittedCount || 0)
+      setIncompleteWeeklyPlanCount(Math.max(0, incompleteCount))
       
       setLoading(false)
       return
@@ -339,8 +350,16 @@ export default function Dashboard() {
       return
     }
 
-    const [{ data: classData }, { data: dashboardItems }, { data: teacherAnnouncementRows }, { data: submittedReports }] = await Promise.all([
+    const currentWeek = getCurrentWeekIndex()
+    
+    const [{ data: classData }, { count: submittedPlanCount }, { data: dashboardItems }, { data: teacherAnnouncementRows }, { data: submittedReports }] = await Promise.all([
       supabase.from('classes').select('*').eq('teacher_id', profile.id).order('name'),
+      supabase
+        .from('weekly_plan_lessons')
+        .select('id', { count: 'exact', head: true })
+        .eq('week', currentWeek)
+        .eq('status', 'submitted')
+        .in('class_id', (await supabase.from('classes').select('id').eq('teacher_id', profile.id)).data?.map(c => c.id) || []),
       supabase
         .from('events_deadlines')
         .select('id, item_type, event_date, title, venue, description, plan_url')
@@ -371,6 +390,16 @@ export default function Dashboard() {
         .order('incident_date', { ascending: false })
         .order('created_at', { ascending: false }),
     ])
+
+    // Calculate teacher's incomplete weekly plan count
+    let totalRequiredPlans = 0
+    classData?.forEach(cls => {
+      if (cls.subject === 'ESL') totalRequiredPlans += cls.programme === 'integrated' ? 6 : 4
+      else if (cls.subject === 'Mathematics' || cls.subject === 'Science') totalRequiredPlans += cls.programme === 'bilingual' ? 3 : 2
+      else if (cls.subject === 'Global Perspectives') totalRequiredPlans += 1
+      else totalRequiredPlans += 1
+    })
+    setIncompleteWeeklyPlanCount(Math.max(0, totalRequiredPlans - (submittedPlanCount || 0)))
 
     const rows = dashboardItems || []
     const classList = classData || []
@@ -1104,32 +1133,62 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
             </div>
 
-            <div className="bg-white rounded-xl border border-gray-200 p-5" style={{ borderTopColor: CARD_ACCENT.class, borderTopWidth: 3 }}>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">My Classes</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {classes.length === 0 ? (
-                  <div className="col-span-full rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
-                    No classes assigned yet. Contact your administrator.
-                  </div>
-                ) : (
-                  classes.map(cls => (
-                    <Link
-                      key={cls.id}
-                      to={`/class/${cls.id}`}
-                      className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all"
-                      style={{ borderTopColor: '#9ca3af', borderTopWidth: 3 }}
-                    >
-                      <div className="font-semibold text-gray-900">{cls.name}</div>
-                      <div className="text-sm text-gray-500 mt-1">
-                        {levelLabel(cls.level)} - {programmeLabel(cls.programme)}
-                      </div>
-                      <div className="text-xs text-gray-400 mt-2">
-                        {cls.student_count || 0} students
-                      </div>
-                    </Link>
-                  ))
-                )}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+              <div className="bg-white rounded-xl border border-gray-200 p-5" style={{ borderTopColor: CARD_ACCENT.class, borderTopWidth: 3 }}>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">My Classes</h3>
+                <div className="space-y-3">
+                  {classes.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
+                      No classes assigned yet. Contact your administrator.
+                    </div>
+                  ) : (
+                    classes.map(cls => (
+                      <Link
+                        key={cls.id}
+                        to={`/class/${cls.id}`}
+                        className="block bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm transition-all"
+                        style={{ borderTopColor: '#9ca3af', borderTopWidth: 2 }}
+                      >
+                        <div className="font-semibold text-gray-900">{cls.name}</div>
+                        <div className="text-sm text-gray-500 mt-1">
+                          {levelLabel(cls.level)} - {programmeLabel(cls.programme)}
+                        </div>
+                        <div className="text-xs text-gray-400 mt-2">
+                          {cls.student_count || 0} students
+                        </div>
+                      </Link>
+                    ))
+                  )}
+                </div>
               </div>
+
+              <Link
+                to="/admin/weekly-plans"
+                className="relative bg-white rounded-xl border border-gray-200 p-5 hover:shadow-sm transition-all block"
+                style={{ borderTopColor: '#1f86c7', borderTopWidth: 3 }}
+              >
+                {incompleteWeeklyPlanCount > 0 && (
+                  <span className="absolute top-3 right-3 min-w-[1.5rem] h-6 px-2 rounded-full bg-red-600 text-white text-xs font-semibold flex items-center justify-center">
+                    {incompleteWeeklyPlanCount}
+                  </span>
+                )}
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Weekly Plan Status</h3>
+                <div className="text-sm text-gray-600 mb-4">
+                  {ALL_WEEKS[getCurrentWeekIndex()].label} - {ALL_WEEKS[getCurrentWeekIndex()].range}
+                </div>
+                <div className="text-sm text-gray-500 mb-4">
+                  {incompleteWeeklyPlanCount > 0 
+                    ? `${incompleteWeeklyPlanCount} lessons remaining to complete this week`
+                    : `All weekly plans have been submitted ✓`
+                  }
+                </div>
+                <button
+                  type="button"
+                  className="w-full rounded-lg bg-blue-600 text-white px-4 py-2.5 text-sm font-medium hover:bg-blue-700"
+                >
+                  Complete weekly plans now!
+                </button>
+              </Link>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
