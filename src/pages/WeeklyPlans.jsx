@@ -149,6 +149,15 @@ export default function WeeklyPlans() {
     }
   }, [selectedHomeroom])
 
+  // Fetch weekly plans when homeroom or week changes
+  useEffect(() => {
+    if (selectedHomeroom && sortedClasses.length > 0) {
+      fetchWeeklyPlans()
+    } else {
+      setWeeklyPlans({})
+    }
+  }, [selectedHomeroom, selectedWeek, sortedClasses])
+
   const fetchClasses = async () => {
     const { data } = await supabase
       .from('classes')
@@ -166,6 +175,25 @@ export default function WeeklyPlans() {
     if (data?.length > 0) {
       setProgramme(data[0].programme)
     }
+  }
+
+  // Fetch weekly plans for current selection
+  const fetchWeeklyPlans = async () => {
+    const classIds = sortedClasses.map(c => c.id)
+
+    const { data } = await supabase
+      .from('weekly_plan_lessons')
+      .select('class_id, lesson_number, content, status, week')
+      .eq('week', selectedWeek)
+      .in('class_id', classIds)
+
+    const planMap = {}
+    data?.forEach(row => {
+      const key = `${row.class_id}-${row.week}-${row.lesson_number}`
+      planMap[key] = row
+    })
+
+    setWeeklyPlans(planMap)
   }
 
   // Get visible subjects based on programme
@@ -225,6 +253,21 @@ export default function WeeklyPlans() {
   const cancelEdit = () => {
     setEditingLesson(null)
     setEditValue('')
+  }
+
+  // Get completion status for a subject
+  const getSubjectStatus = (cls) => {
+    const lessonCount = getLessonsForSubject(cls.subject)
+    let completedCount = 0
+
+    for (let lesson = 1; lesson <= lessonCount; lesson++) {
+      const content = getLessonContent(cls.id, lesson)
+      if (content && content.trim().length > 0) completedCount++
+    }
+
+    if (completedCount === 0) return 'not_started'
+    if (completedCount < lessonCount) return 'partial'
+    return 'completed'
   }
 
   // Save lesson
@@ -362,9 +405,26 @@ export default function WeeklyPlans() {
                         Teacher: {cls.users?.full_name || 'Unassigned'}
                       </span>
                     </div>
-                    <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-500">
-                      Not Submitted
-                    </span>
+                    {(() => {
+                      const status = getSubjectStatus(cls)
+                      let badgeStyle = 'bg-gray-100 text-gray-500'
+                      let badgeText = 'Not Started'
+
+                      if (status === 'partial') {
+                        badgeStyle = 'bg-amber-100 text-amber-700'
+                        badgeText = 'In Progress'
+                      }
+                      if (status === 'completed') {
+                        badgeStyle = 'bg-green-100 text-green-700'
+                        badgeText = 'Submitted ✓'
+                      }
+
+                      return (
+                        <span className={`text-xs px-2 py-1 rounded-full ${badgeStyle}`}>
+                          {badgeText}
+                        </span>
+                      )
+                    })()}
                   </div>
                   
                    <div className="space-y-3">
