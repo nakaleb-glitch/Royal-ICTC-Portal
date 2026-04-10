@@ -131,15 +131,14 @@ export default function ClassDetail() {
 
   // Always read directly from storage for latest value - no local caching
   const detectCurrentTerm = () => {
-    // Always get fresh value when this function runs
+    // Always get fresh value when this function runs - using EXACT SAME KEY as navigation bar!
     let week
 
-    const debugVal = window.localStorage.getItem('debug_current_week')
+    const debugVal = window.sessionStorage.getItem('debug_week_override')
     if (debugVal != null && debugVal !== '') {
       week = parseInt(debugVal, 10)
     } else {
-      const navVal = window.sessionStorage.getItem('current_week_number')
-      week = navVal != null ? parseInt(navVal, 10) : 0
+      week = getCurrentWeekIndex()
     }
 
     if (Number.isNaN(week) || week < 0 || week > 40) {
