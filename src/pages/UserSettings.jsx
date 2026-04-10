@@ -71,6 +71,14 @@ export default function UserSettings() {
     })
 
     if (authError) throw authError
+
+    // For student users: also save avatar_url directly to students table (single source of truth)
+    if (profile?.role === 'student' && profile?.student_id_ref) {
+      await supabase
+        .from('students')
+        .update({ avatar_url: publicUrl })
+        .eq('id', profile.student_id_ref)
+    }
   }
 
   const handleImageUpload = async (e) => {

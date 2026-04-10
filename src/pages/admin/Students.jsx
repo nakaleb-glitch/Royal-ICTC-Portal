@@ -233,7 +233,7 @@ export default function Students() {
     const [{ data: studentRows }, { data: userRows }, { data: resetRows }, { data: classRows }] = await Promise.all([
       supabase
         .from('students')
-        .select('id, student_id, name_eng, name_vn, class, level, programme')
+        .select('id, student_id, name_eng, name_vn, class, level, programme, avatar_url')
         .order('name_eng'),
       supabase
         .from('users')
@@ -906,6 +906,7 @@ export default function Students() {
                 <tr key={student.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3">
                     <ProfileAvatar 
+                      avatarUrl={student.avatar_url}
                       name={student.name_eng} 
                       size={36} 
                     />
