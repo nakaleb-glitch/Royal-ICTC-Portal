@@ -79,18 +79,6 @@ const getTermDateSummary = (termKey) => {
   return `${firstDate} - ${lastDate}`
 }
 
-const detectCurrentTerm = () => {
-  // Get current active week number from navigation bar
-  const activeWeek = window.sessionStorage.getItem('current_week_number') || 0
-  const week = parseInt(activeWeek, 10)
-
-  if (week >= 0 && week <= 7) return 'midterm_1'
-  if (week >= 8 && week <= 15) return 'final_1'
-  if (week >= 16 && week <= 27) return 'midterm_2'
-  if (week >= 28 && week <= 39) return 'final_2'
-
-  return null
-}
 
 export default function ClassDetail() {
   const { classId } = useParams()
@@ -112,6 +100,28 @@ export default function ClassDetail() {
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null)
   const [showAnnouncementForm, setShowAnnouncementForm] = useState(false)
   const [showSentAnnouncements, setShowSentAnnouncements] = useState(false)
+  const [activeWeek, setActiveWeek] = useState(0)
+
+  // Listen for changes to current week from navigation bar
+  useEffect(() => {
+    const updateWeek = () => {
+      const w = window.sessionStorage.getItem('current_week_number') || 0
+      setActiveWeek(parseInt(w, 10))
+    }
+
+    updateWeek()
+    const interval = setInterval(updateWeek, 500)
+    return () => clearInterval(interval)
+  }, [])
+
+  const detectCurrentTerm = () => {
+    const week = activeWeek
+    if (week >= 0 && week <= 7) return 'midterm_1'
+    if (week >= 8 && week <= 15) return 'final_1'
+    if (week >= 16 && week <= 27) return 'midterm_2'
+    if (week >= 28 && week <= 39) return 'final_2'
+    return null
+  }
 
   useEffect(() => { fetchClass() }, [classId])
   useEffect(() => { fetchStudentRoster() }, [classId])
