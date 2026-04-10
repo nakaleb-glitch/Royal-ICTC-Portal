@@ -675,7 +675,7 @@ function Gradebook({ cls, term, termLabel, onBack, onUnsavedChange }) {
     setLoading(true)
     const { data } = await supabase
       .from('class_students')
-      .select('students(*)')
+      .select('students(id, student_id, name_eng, name_vn, avatar_url)')
       .eq('class_id', cls.id)
     const list = data?.map(d => d.students).sort((a, b) => a.name_eng.localeCompare(b.name_eng)) || []
     setStudents(list)
