@@ -80,15 +80,28 @@ const getTermDateSummary = (termKey) => {
 }
 
 const detectCurrentTerm = () => {
-  const today = new Date()
+  const now = new Date()
+  const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()))
   const schoolYear = 2026
 
   const parseDate = (str) => {
     if (!str) return null
-    const [month, day] = str.trim().split('. ')
-    if (!month || !day) return null
-    const year = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].includes(month) ? schoolYear + 1 : schoolYear
-    return new Date(`${month} ${day}, ${year}`)
+    const clean = str.trim().replace('.', '')
+    const parts = clean.split(' ')
+    if (parts.length < 2) return null
+
+    const monthMap = {
+      'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11,
+      'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5
+    }
+
+    const month = monthMap[parts[0]]
+    const day = parseInt(parts[1], 10)
+
+    if (month === undefined || isNaN(day)) return null
+
+    const year = month < 6 ? schoolYear + 1 : schoolYear
+    return new Date(Date.UTC(year, month, day))
   }
 
   for (const term of TERMS) {
