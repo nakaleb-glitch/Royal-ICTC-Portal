@@ -145,10 +145,12 @@ export default function ClassDetail() {
       }
     } else {
       const today = new Date()
-      if (today < new Date('2026-08-17')) return 0
-      
-      // Default fallback
-      week = 0
+      if (today < new Date('2026-08-17')) {
+        week = 0
+      } else {
+        // Default fallback
+        week = 0
+      }
     }
 
     if (Number.isNaN(week) || week < 0 || week > 40) {
