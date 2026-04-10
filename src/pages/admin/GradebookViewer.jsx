@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import Layout from '../../components/Layout'
 import { useNavigate } from 'react-router-dom'
+import ExcelJS from 'exceljs'
 
 const TERMS = [
   { key: 'midterm_1', label: 'Midterm 1' },
@@ -357,6 +358,143 @@ export default function GradebookViewer() {
     return sortedClasses.filter(c => c.programme === programme)
   }
 
+  const handleExportToExcel = async () => {
+    try {
+      // Determine which template to use based on programme
+      const templatePath = programme === 'integrated' 
+        ? '/src/assets/templates/lms_primary_gradebook_integrated_template.xlsx'
+        : '/src/assets/templates/lms_primary_gradebook_bilingual_template.xlsx'
+
+      // Load template file
+      const response = await fetch(templatePath)
+      const arrayBuffer = await response.arrayBuffer()
+      
+      // Create workbook from template
+      const workbook = new ExcelJS.Workbook()
+      await workbook.xlsx.load(arrayBuffer)
+
+      // Get CLASS sheet
+      const classSheet = workbook.getWorksheet('CLASS')
+      
+      // Fill students on CLASS sheet (row 6 onwards)
+      studentData.forEach(({ student }, index) => {
+        const rowIndex = 6 + index
+        const row = classSheet.getRow(rowIndex)
+        row.getCell(3).value = student.student_id || ''
+        row.getCell(4).value = student.name_vn || ''
+        row.getCell(5).value = student.name_eng || ''
+        row.commit()
+      })
+
+      // Fill each subject sheet
+      for (const cls of getSubjectClasses()) {
+        const subject = cls.subject
+        const sheet = workbook.getWorksheet(subject)
+        
+        if (!sheet) continue
+
+        // Fetch grades for this subject
+        const { data: participationData } = await supabase
+          .from('participation_grades')
+          .select('student_id, score')
+          .eq('class_id', cls.id)
+          .eq('term', selectedTerm)
+
+        const { data: assignmentData } = await supabase
+          .from('assignments')
+          .select('id, max_points')
+          .eq('class_id', cls.id)
+          .eq('term', selectedTerm)
+
+        const assignmentIds = assignmentData?.map(a => a.id) || []
+        let assignmentGradesData = []
+        if (assignmentIds.length > 0) {
+          const { data: agData } = await supabase
+            .from('assignment_grades')
+            .select('student_id, assignment_id, score')
+            .in('assignment_id', assignmentIds)
+          assignmentGradesData = agData || []
+        }
+
+        const { data: progressTestData } = await supabase
+          .from('progress_test_grades')
+          .select('student_id, score, reading_writing_score, listening_score, speaking_score, reading_writing_total, listening_total, speaking_total, total_points')
+          .eq('class_id', cls.id)
+          .eq('term', selectedTerm)
+
+        // Create maps
+        const participationMap = Object.fromEntries(participationData?.map(g => [g.student_id, g.score]) || [])
+        const progressTestMap = Object.fromEntries(progressTestData?.map(g => [g.student_id, g]) || [])
+        
+        // Calculate assignment totals
+        const assignmentTotals = {}
+        const assignmentMax = {}
+        assignmentGradesData?.forEach(grade => {
+          if (!assignmentTotals[grade.student_id]) {
+            assignmentTotals[grade.student_id] = 0
+            assignmentMax[grade.student_id] = 0
+          }
+          assignmentTotals[grade.student_id] += grade.score || 0
+          const assignment = assignmentData?.find(a => a.id === grade.assignment_id)
+          if (assignment) {
+            assignmentMax[grade.student_id] += assignment.max_points || 0
+          }
+        })
+
+        // Fill student rows on subject sheet
+        studentData.forEach(({ student }, index) => {
+          const rowIndex = 6 + index
+          const row = sheet.getRow(rowIndex)
+          
+          const participation = participationMap[student.id] != null ? participationMap[student.id] * 10 : null
+          const attainment = assignmentMax[student.id] > 0 ? (assignmentTotals[student.id] / assignmentMax[student.id]) * 100 : null
+          const pt = progressTestMap[student.id]
+
+          // Calculate progress test percentage
+          let progressTest = null
+          if (pt) {
+            if (subject === 'ESL') {
+              const components = []
+              if (pt.reading_writing_score != null && pt.reading_writing_total > 0) components.push((pt.reading_writing_score / pt.reading_writing_total) * 100)
+              if (pt.listening_score != null && pt.listening_total > 0) components.push((pt.listening_score / pt.listening_total) * 100)
+              if (pt.speaking_score != null && pt.speaking_total > 0) components.push((pt.speaking_score / pt.speaking_total) * 100)
+              if (components.length === 3) {
+                progressTest = components.reduce((a, b) => a + b, 0) / 3
+              }
+            } else {
+              if (pt.score != null && pt.total_points > 0) {
+                progressTest = (pt.score / pt.total_points) * 100
+              }
+            }
+          }
+
+          // Write values to cells
+          row.getCell(8).value = participation != null ? Number(participation.toFixed(1)) : null
+          row.getCell(12).value = attainment != null ? Number(attainment.toFixed(1)) : null
+          row.getCell(16).value = progressTest != null ? Number(progressTest.toFixed(1)) : null
+
+          row.commit()
+        })
+      }
+
+      // Generate and download file
+      const buffer = await workbook.xlsx.writeBuffer()
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${selectedHomeroom}_${selectedTerm}_gradebook.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
+
+    } catch (error) {
+      console.error('Export failed:', error)
+      alert('Failed to export gradebook. Please try again.')
+    }
+  }
+
   if (loading) {
     return (
       <Layout>
@@ -420,6 +558,18 @@ export default function GradebookViewer() {
           </div>
         </div>
       </div>
+
+      {/* Export Button */}
+      {selectedHomeroom && selectedTerm && sortedClasses.length > 0 && (
+        <div className="mb-6">
+          <button
+            onClick={handleExportToExcel}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center gap-2"
+          >
+            📊 Export to Excel Gradebook
+          </button>
+        </div>
+      )}
 
       {/* Subject Tabs */}
       {selectedHomeroom && selectedTerm && sortedClasses.length > 0 && (
