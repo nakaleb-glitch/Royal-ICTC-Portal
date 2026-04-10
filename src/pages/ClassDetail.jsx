@@ -80,41 +80,14 @@ const getTermDateSummary = (termKey) => {
 }
 
 const detectCurrentTerm = () => {
-  const now = new Date()
-  const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()))
-  const schoolYear = 2026
+  // Get current active week number from navigation bar
+  const activeWeek = window.sessionStorage.getItem('current_week_number') || 0
+  const week = parseInt(activeWeek, 10)
 
-  const parseDate = (str) => {
-    if (!str) return null
-    const clean = str.trim().replace('.', '')
-    const parts = clean.split(' ')
-    if (parts.length < 2) return null
-
-    const monthMap = {
-      'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11,
-      'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5
-    }
-
-    const month = monthMap[parts[0]]
-    const day = parseInt(parts[1], 10)
-
-    if (month === undefined || isNaN(day)) return null
-
-    const year = month < 6 ? schoolYear + 1 : schoolYear
-    return new Date(Date.UTC(year, month, day))
-  }
-
-  for (const term of TERMS) {
-    const weeks = PARTICIPATION_WEEK_SCHEDULE[term.key] || []
-    if (weeks.length === 0) continue
-
-    const startDate = parseDate(weeks[0]?.range?.split('-')[0])
-    const endDate = parseDate(weeks[weeks.length - 1]?.range?.split('-')[1])
-
-    if (startDate && endDate && today >= startDate && today <= endDate) {
-      return term.key
-    }
-  }
+  if (week >= 0 && week <= 7) return 'midterm_1'
+  if (week >= 8 && week <= 15) return 'final_1'
+  if (week >= 16 && week <= 27) return 'midterm_2'
+  if (week >= 28 && week <= 39) return 'final_2'
 
   return null
 }
