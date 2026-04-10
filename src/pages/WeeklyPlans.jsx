@@ -477,7 +477,7 @@ export default function WeeklyPlans() {
                           onClick={() => submitClassWeek(cls)}
                           className="text-xs px-3 py-1 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 transition-colors"
                         >
-                          Submit Completed
+                          Submit Now
                         </button>
                       )}
                     </div>

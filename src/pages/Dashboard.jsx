@@ -903,19 +903,19 @@ export default function Dashboard() {
                 <div className="text-sm text-gray-500 mt-1">Review termly gradebooks for each class.</div>
               </Link>
               {/* Card 8 - BLUE */}
-              <Link
-                to="/weekly-plans"
-                className="relative bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block min-h-[120px]"
-                style={{ borderTopColor: '#1f86c7', borderTopWidth: 3 }}
-              >
-                {incompleteWeeklyPlanCount > 0 && (
-                  <span className="absolute top-3 right-3 min-w-[1.5rem] h-6 px-2 rounded-full bg-red-600 text-white text-xs font-semibold flex items-center justify-center">
-                    {incompleteWeeklyPlanCount}
-                  </span>
-                )}
-                <div className="font-semibold text-gray-900">Weekly Plan Management</div>
-                <div className="text-sm text-gray-500 mt-1">Monitor weekly plan completion for all classes.</div>
-              </Link>
+               <Link
+                 to="/weekly-plans"
+                 className="relative bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block min-h-[120px]"
+                 style={{ borderTopColor: '#1f86c7', borderTopWidth: 3 }}
+               >
+                 <div className="font-semibold text-gray-900">Weekly Plans</div>
+                 <div className="text-sm text-gray-500 mt-1">Lessons remaining to complete this week:</div>
+                 {incompleteWeeklyPlanCount > 0 && (
+                   <span className="inline-block mt-2 min-w-[1.5rem] h-6 px-2 rounded-full bg-red-600 text-white text-xs font-semibold flex items-center justify-center">
+                     {incompleteWeeklyPlanCount}
+                   </span>
+                 )}
+               </Link>
             </div>
           </div>
 
