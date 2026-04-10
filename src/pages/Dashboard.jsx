@@ -1218,17 +1218,18 @@ export default function Dashboard() {
                   className="relative bg-white rounded-xl border border-gray-200 p-5 hover:shadow-sm transition-all block"
                   style={{ borderTopColor: '#1f86c7', borderTopWidth: 3 }}
                 >
-                  {incompleteWeeklyPlanCount > 0 && (
-                    <span className="absolute top-3 right-3 min-w-[1.5rem] h-6 px-2 rounded-full bg-red-600 text-white text-xs font-semibold flex items-center justify-center">
-                      {incompleteWeeklyPlanCount}
-                    </span>
-                  )}
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Weekly Plans</h3>
-                  <div className="text-sm text-gray-600 mb-4">
-                    {incompleteWeeklyPlanCount > 0 
-                      ? `${incompleteWeeklyPlanCount} lessons remaining to complete this week`
-                      : `All weekly plans have been submitted ✓`
-                    }
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Weekly Plans</h3>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-500">Lessons remaining to complete:</span>
+                      {incompleteWeeklyPlanCount > 0 ? (
+                        <span className="min-w-[1.5rem] h-6 px-2 rounded-full bg-red-600 text-white text-xs font-semibold flex items-center justify-center">
+                          {incompleteWeeklyPlanCount}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-green-600 font-medium">All submitted ✓</span>
+                      )}
+                    </div>
                   </div>
                   <div className="w-full rounded-lg text-white px-4 py-2.5 text-sm font-medium text-center" style={{ backgroundColor: 'rgb(31, 134, 199)' }}>
                     Complete weekly plans now!
