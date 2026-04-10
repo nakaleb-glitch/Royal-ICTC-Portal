@@ -1214,7 +1214,7 @@ export default function Dashboard() {
 
                 {/* 2. Weekly Plan Status */}
                 <Link
-                  to="/admin/weekly-plans"
+                  to="/weekly-plans"
                   className="relative bg-white rounded-xl border border-gray-200 p-5 hover:shadow-sm transition-all block"
                   style={{ borderTopColor: '#1f86c7', borderTopWidth: 3 }}
                 >
@@ -1233,7 +1233,7 @@ export default function Dashboard() {
                       : `All weekly plans have been submitted ✓`
                     }
                   </div>
-                  <div className="w-full rounded-lg bg-blue-600 text-white px-4 py-2.5 text-sm font-medium hover:bg-blue-700 text-center">
+                  <div className="w-full rounded-lg text-white px-4 py-2.5 text-sm font-medium text-center" style={{ backgroundColor: 'rgb(31, 134, 199)' }}>
                     Complete weekly plans now!
                   </div>
                 </Link>
