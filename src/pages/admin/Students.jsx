@@ -233,7 +233,7 @@ export default function Students() {
     const [{ data: studentRows }, { data: userRows }, { data: resetRows }, { data: classRows }] = await Promise.all([
       supabase
         .from('students')
-        .select('id, student_id, name_eng, name_vn, class, level, programme, avatar_url')
+        .select('id, student_id, name_eng, name_vn, class, level, programme')
         .order('name_eng'),
       supabase
         .from('users')
