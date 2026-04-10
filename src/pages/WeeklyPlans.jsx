@@ -270,7 +270,7 @@ export default function WeeklyPlans() {
     return 'completed'
   }
 
-  // Save lesson
+  // Save lesson as draft
   const saveLesson = async (classId, lesson) => {
     setSavingLesson(true)
     try {
@@ -304,6 +304,52 @@ export default function WeeklyPlans() {
     }
     setSavingLesson(false)
     cancelEdit()
+  }
+
+  // Submit all lessons for this class and week
+  const submitClassWeek = async (cls) => {
+    const lessonCount = getLessonsForSubject(cls.subject)
+    const updates = []
+
+    for (let lesson = 1; lesson <= lessonCount; lesson++) {
+      const content = getLessonContent(cls.id, lesson)
+      if (content && content.trim().length > 0) {
+        updates.push({
+          class_id: cls.id,
+          week: selectedWeek,
+          lesson_number: lesson,
+          content: content.trim(),
+          status: 'submitted',
+          submitted_by: profile.id,
+        })
+      }
+    }
+
+    if (updates.length === 0) return
+
+    try {
+      const { error } = await supabase
+        .from('weekly_plan_lessons')
+        .upsert(updates, {
+          onConflict: 'class_id, week, lesson_number'
+        })
+
+      if (!error) {
+        // Update local cache
+        const newPlans = { ...weeklyPlans }
+        updates.forEach(update => {
+          const key = `${update.class_id}-${update.week}-${update.lesson_number}`
+          newPlans[key] = {
+            ...newPlans[key],
+            content: update.content,
+            status: 'submitted'
+          }
+        })
+        setWeeklyPlans(newPlans)
+      }
+    } catch (e) {
+      console.error(e)
+    }
   }
 
   if (loading) {
@@ -405,26 +451,36 @@ export default function WeeklyPlans() {
                         Teacher: {cls.users?.full_name || 'Unassigned'}
                       </span>
                     </div>
-                    {(() => {
-                      const status = getSubjectStatus(cls)
-                      let badgeStyle = 'bg-gray-100 text-gray-500'
-                      let badgeText = 'Not Started'
+                    <div className="flex items-center gap-3">
+                      {(() => {
+                        const status = getSubjectStatus(cls)
+                        let badgeStyle = 'bg-gray-100 text-gray-500'
+                        let badgeText = 'Not Started'
 
-                      if (status === 'partial') {
-                        badgeStyle = 'bg-amber-100 text-amber-700'
-                        badgeText = 'In Progress'
-                      }
-                      if (status === 'completed') {
-                        badgeStyle = 'bg-green-100 text-green-700'
-                        badgeText = 'Submitted ✓'
-                      }
+                        if (status === 'partial') {
+                          badgeStyle = 'bg-amber-100 text-amber-700'
+                          badgeText = 'In Progress'
+                        }
+                        if (status === 'completed') {
+                          badgeStyle = 'bg-green-100 text-green-700'
+                          badgeText = 'Submitted ✓'
+                        }
 
-                      return (
-                        <span className={`text-xs px-2 py-1 rounded-full ${badgeStyle}`}>
-                          {badgeText}
-                        </span>
-                      )
-                    })()}
+                        return (
+                          <span className={`text-xs px-2 py-1 rounded-full ${badgeStyle}`}>
+                            {badgeText}
+                          </span>
+                        )
+                      })()}
+                      {canEditClass(cls) && (
+                        <button
+                          onClick={() => submitClassWeek(cls)}
+                          className="text-xs px-3 py-1 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 transition-colors"
+                        >
+                          Submit Completed
+                        </button>
+                      )}
+                    </div>
                   </div>
                   
                    <div className="space-y-3">
