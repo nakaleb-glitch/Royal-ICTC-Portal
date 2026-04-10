@@ -1182,12 +1182,9 @@ export default function Dashboard() {
                     : `All weekly plans have been submitted ✓`
                   }
                 </div>
-                <button
-                  type="button"
-                  className="w-full rounded-lg bg-blue-600 text-white px-4 py-2.5 text-sm font-medium hover:bg-blue-700"
-                >
+                <div className="w-full rounded-lg bg-blue-600 text-white px-4 py-2.5 text-sm font-medium hover:bg-blue-700 text-center">
                   Complete weekly plans now!
-                </button>
+                </div>
               </Link>
             </div>
 
