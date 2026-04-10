@@ -79,6 +79,33 @@ const getTermDateSummary = (termKey) => {
   return `${firstDate} - ${lastDate}`
 }
 
+const detectCurrentTerm = () => {
+  const today = new Date()
+  const schoolYear = 2026
+
+  const parseDate = (str) => {
+    if (!str) return null
+    const [month, day] = str.trim().split('. ')
+    if (!month || !day) return null
+    const year = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].includes(month) ? schoolYear + 1 : schoolYear
+    return new Date(`${month} ${day}, ${year}`)
+  }
+
+  for (const term of TERMS) {
+    const weeks = PARTICIPATION_WEEK_SCHEDULE[term.key] || []
+    if (weeks.length === 0) continue
+
+    const startDate = parseDate(weeks[0]?.range?.split('-')[0])
+    const endDate = parseDate(weeks[weeks.length - 1]?.range?.split('-')[1])
+
+    if (startDate && endDate && today >= startDate && today <= endDate) {
+      return term.key
+    }
+  }
+
+  return null
+}
+
 export default function ClassDetail() {
   const { classId } = useParams()
   const navigate = useNavigate()
@@ -331,17 +358,25 @@ export default function ClassDetail() {
               <div className="bg-white rounded-xl border border-gray-200 p-4" style={{ borderTopColor: '#d1232a', borderTopWidth: 3 }}>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Gradebooks</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  {TERMS.map(term => (
-                    <button key={term.key} onClick={() => setSelectedTerm(term.key)}
-                      className="bg-white rounded-xl border border-gray-200 p-6 text-left hover:shadow-sm transition-all"
-                      style={{ borderTopColor: '#9ca3af', borderTopWidth: 3 }}>
-                      <div className="text-lg font-semibold text-gray-900">{term.label}</div>
-                      <div className="text-sm text-gray-400 mt-1">
-                        {term.weeks} weeks
-                        {getTermDateSummary(term.key) ? ` · ${getTermDateSummary(term.key)}` : ''}
-                      </div>
-                    </button>
-                  ))}
+                  {TERMS.map(term => {
+                    const isCurrentTerm = detectCurrentTerm() === term.key
+                    return (
+                      <button key={term.key} onClick={() => setSelectedTerm(term.key)}
+                        className={`bg-white rounded-xl border p-6 text-left hover:shadow-sm transition-all relative ${isCurrentTerm ? 'border-green-400 bg-green-50' : 'border-gray-200'}`}
+                        style={{ borderTopColor: isCurrentTerm ? '#22c55e' : '#9ca3af', borderTopWidth: 3 }}>
+                        {isCurrentTerm && (
+                          <span className="absolute top-3 right-3 text-[10px] px-2 py-0.5 bg-green-600 text-white rounded-full font-medium">
+                            ✓ Current Term
+                          </span>
+                        )}
+                        <div className="text-lg font-semibold text-gray-900">{term.label}</div>
+                        <div className="text-sm text-gray-400 mt-1">
+                          {term.weeks} weeks
+                          {getTermDateSummary(term.key) ? ` · ${getTermDateSummary(term.key)}` : ''}
+                        </div>
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
 
