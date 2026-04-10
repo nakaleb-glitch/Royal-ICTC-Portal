@@ -109,6 +109,9 @@ export default function WeeklyPlans() {
   const [loading, setLoading] = useState(true)
   const [programme, setProgramme] = useState('')
   const [weeklyPlans, setWeeklyPlans] = useState({})
+  const [editingLesson, setEditingLesson] = useState(null)
+  const [editValue, setEditValue] = useState('')
+  const [savingLesson, setSavingLesson] = useState(false)
   
   const isAdmin = profile?.role === 'admin'
   const currentWeek = ALL_WEEKS[selectedWeek]
@@ -191,6 +194,73 @@ export default function WeeklyPlans() {
       return 1
     }
     return 1
+  }
+
+  // Check if user can edit this class
+  const canEditClass = (cls) => {
+    if (isAdmin) return false // admin can not edit, only view
+    if (!profile?.id) return false
+    return cls.teacher_id === profile.id
+  }
+
+  // Get lesson plan from cache or default
+  const getLessonContent = (classId, lesson) => {
+    const key = `${classId}-${selectedWeek}-${lesson}`
+    return weeklyPlans[key]?.content || ''
+  }
+
+  // Get lesson status
+  const getLessonStatus = (classId, lesson) => {
+    const key = `${classId}-${selectedWeek}-${lesson}`
+    return weeklyPlans[key]?.status || 'not_started'
+  }
+
+  // Start edit mode
+  const startEdit = (classId, lesson) => {
+    setEditingLesson(`${classId}-${lesson}`)
+    setEditValue(getLessonContent(classId, lesson))
+  }
+
+  // Cancel edit
+  const cancelEdit = () => {
+    setEditingLesson(null)
+    setEditValue('')
+  }
+
+  // Save lesson
+  const saveLesson = async (classId, lesson) => {
+    setSavingLesson(true)
+    try {
+      const { error } = await supabase
+        .from('weekly_plan_lessons')
+        .upsert({
+          class_id: classId,
+          week: selectedWeek,
+          lesson_number: lesson,
+          content: editValue.trim(),
+          status: editValue.trim().length > 0 ? 'draft' : 'not_started',
+          submitted_by: profile.id,
+        }, {
+          onConflict: 'class_id, week, lesson_number'
+        })
+
+      if (!error) {
+        // Update local cache
+        const key = `${classId}-${selectedWeek}-${lesson}`
+        setWeeklyPlans(prev => ({
+          ...prev,
+          [key]: {
+            ...prev[key],
+            content: editValue.trim(),
+            status: editValue.trim().length > 0 ? 'draft' : 'not_started'
+          }
+        }))
+      }
+    } catch (e) {
+      console.error(e)
+    }
+    setSavingLesson(false)
+    cancelEdit()
   }
 
   if (loading) {
@@ -297,21 +367,76 @@ export default function WeeklyPlans() {
                     </span>
                   </div>
                   
-                  <div className="space-y-3">
-                    {Array.from({ length: lessonCount }, (_, i) => i + 1).map(lesson => (
-                      <div key={lesson} className="flex items-center gap-4">
-                        <div className="w-24">
-                          <div className="text-sm font-medium text-gray-600">
-                            Lesson #{lesson}:
+                   <div className="space-y-3">
+                    {Array.from({ length: lessonCount }, (_, i) => i + 1).map(lesson => {
+                      const isEditing = editingLesson === `${cls.id}-${lesson}`
+                      const canEdit = canEditClass(cls)
+                      const status = getLessonStatus(cls.id, lesson)
+                      const content = getLessonContent(cls.id, lesson)
+
+                      let borderStyle = 'border-dashed border-gray-200'
+                      if (status === 'draft') borderStyle = 'border-solid border-amber-400'
+                      if (status === 'submitted') borderStyle = 'border-solid border-green-500'
+                      if (status === 'approved') borderStyle = 'border-solid border-blue-600'
+
+                      return (
+                        <div key={lesson} className="flex items-center gap-4">
+                          <div className="w-24">
+                            <div className="text-sm font-medium text-gray-600">
+                              Lesson #{lesson}:
+                            </div>
+                            <div className="text-xs text-gray-400 mt-0.5">
+                              Day - P#/P#
+                            </div>
                           </div>
-                          <div className="text-xs text-gray-400 mt-0.5">
-                            Day - P#/P#
-                          </div>
+
+                          {isEditing ? (
+                            <div className="flex-1 flex flex-col gap-2">
+                              <textarea
+                                autoFocus
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                className="w-full min-h-[80px] rounded-lg border border-blue-400 bg-blue-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                                placeholder="Enter lesson plan details..."
+                              />
+                              <div className="flex gap-2 justify-end">
+                                <button
+                                  type="button"
+                                  onClick={cancelEdit}
+                                  disabled={savingLesson}
+                                  className="px-3 py-1 rounded-lg bg-gray-200 text-gray-700 text-xs font-medium hover:bg-gray-300 transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => saveLesson(cls.id, lesson)}
+                                  disabled={savingLesson}
+                                  className="px-3 py-1 rounded-lg bg-green-600 text-white text-xs font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
+                                >
+                                  {savingLesson ? 'Saving...' : 'Save'}
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div
+                              className={`flex-1 min-h-[48px] rounded-lg border ${borderStyle} bg-gray-50 cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors p-3 ${!canEdit ? 'cursor-not-allowed opacity-70' : ''}`}
+                              onClick={() => canEdit && startEdit(cls.id, lesson)}
+                            >
+                              {content ? (
+                                <div className="text-sm text-gray-800 whitespace-pre-wrap">
+                                  {content}
+                                </div>
+                              ) : (
+                                <div className="text-xs text-gray-400 italic">
+                                  {canEdit ? 'Click to add lesson plan' : 'No lesson plan yet'}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        <div className="flex-1 h-10 bg-gray-50 rounded-lg border border-gray-200 border-dashed cursor-pointer hover:border-blue-300 hover:bg-blue-50 transition-colors">
-                        </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               )
