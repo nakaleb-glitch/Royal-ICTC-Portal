@@ -117,6 +117,11 @@ export default function ResourceBookings() {
     plan: '',
   })
   const [saving, setSaving] = useState(false)
+  const [showBlockModal, setShowBlockModal] = useState(false)
+  const [blockWeek, setBlockWeek] = useState(0)
+  const [blockLocation, setBlockLocation] = useState('library')
+  const [blockSlots, setBlockSlots] = useState({})
+  const [blockedPeriods, setBlockedPeriods] = useState({})
 
   const currentWeek = ALL_WEEKS.find(w => w.week === selectedWeek)
   const currentLocation = LOCATIONS.find(l => l.id === selectedLocation)
@@ -195,6 +200,12 @@ export default function ResourceBookings() {
 
           {profile?.role === 'admin' && (
             <button
+              onClick={() => {
+                setBlockWeek(selectedWeek)
+                setBlockLocation(selectedLocation)
+                setBlockSlots({})
+                setShowBlockModal(true)
+              }}
               className="text-white px-4 py-1.5 rounded-lg hover:opacity-90 transition-opacity text-sm font-medium"
               style={{ backgroundColor: '#d1232a' }}
             >
@@ -398,6 +409,122 @@ export default function ResourceBookings() {
                 style={{ backgroundColor: '#1f86c7' }}
               >
                 {saving ? 'Saving...' : 'Save Booking'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Block Periods Modal */}
+    {showBlockModal && (
+      <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4">
+        <div className="w-full max-w-2xl bg-white rounded-xl border border-gray-200 p-5">
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div>
+              <h4 className="text-base font-semibold text-gray-900">Block Periods</h4>
+              <p className="text-xs text-gray-500 mt-1">
+                Block selected periods from being booked. Applies to selected week and all future weeks.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowBlockModal(false)}
+              className="text-gray-400 hover:text-gray-600"
+              aria-label="Close block modal"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Start Week</label>
+                <select
+                  value={blockWeek}
+                  onChange={(e) => setBlockWeek(Number(e.target.value))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                >
+                  {ALL_WEEKS.map((w, i) => (
+                    <option key={w.week} value={i}>{w.label} - {w.range}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Location</label>
+                <select
+                  value={blockLocation}
+                  onChange={(e) => setBlockLocation(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                >
+                  {LOCATIONS.map(loc => (
+                    <option key={loc.id} value={loc.id}>{loc.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+              <table className="w-full text-sm table-fixed">
+                <thead>
+                  <tr className="border-b border-gray-200 bg-gray-50">
+                    <th className="px-3 py-2 text-left font-medium text-gray-600 w-[150px]">Time</th>
+                    {DAYS.map(day => (
+                      <th key={day} className="px-3 py-2 text-center font-medium text-gray-600">
+                        {day}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {TIMETABLE.map((row, idx) => (
+                    <tr key={idx} className={row.isBreak ? 'bg-gray-50' : 'border-b border-gray-100'}>
+                      <td className={`px-3 py-2 border-r border-gray-100 ${row.isBreak ? 'text-center font-medium text-red-600' : ''}`}>
+                        <div className="font-medium">{row.label}</div>
+                      </td>
+                      {DAYS.map((day, dayIdx) => {
+                        const isChecked = blockSlots[`${row.period}-${dayIdx}`] || false
+                        return (
+                          <td key={dayIdx} className="px-1 py-1 border-r border-gray-100 align-top text-center">
+                            {!row.isBreak && (
+                              <label className="flex items-center justify-center w-full min-h-[50px] cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={(e) => {
+                                    setBlockSlots(prev => ({
+                                      ...prev,
+                                      [`${row.period}-${dayIdx}`]: e.target.checked
+                                    }))
+                                  }}
+                                  className="w-5 h-5 cursor-pointer"
+                                />
+                              </label>
+                            )}
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowBlockModal(false)}
+                className="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="flex-1 px-4 py-2 rounded-lg text-white text-sm font-medium"
+                style={{ backgroundColor: '#d1232a' }}
+              >
+                Block Periods
               </button>
             </div>
           </div>
