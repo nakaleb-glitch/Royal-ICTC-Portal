@@ -1235,29 +1235,44 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* 2. Weekly Plans */}
-                <Link
-                  to="/weekly-plans"
-                  className="relative bg-white rounded-xl border border-gray-200 p-5 hover:shadow-sm transition-all block"
-                  style={{ borderTopColor: '#1f86c7', borderTopWidth: 3 }}
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Weekly Plans</h3>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-500">Lessons remaining to complete:</span>
-                      {incompleteWeeklyPlanCount > 0 ? (
-                        <span className="min-w-[1.5rem] h-6 px-2 rounded-full bg-red-600 text-white text-xs font-semibold flex items-center justify-center">
-                          {incompleteWeeklyPlanCount}
-                        </span>
-                      ) : (
-                        <span className="text-sm text-green-600 font-medium">All submitted ✓</span>
-                      )}
+                {/* 2. Weekly Plans + Resource Bookings Row */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Weekly Plans Card */}
+                  <Link
+                    to="/weekly-plans"
+                    className="relative bg-white rounded-xl border border-gray-200 p-5 hover:shadow-sm transition-all block"
+                    style={{ borderTopColor: '#1f86c7', borderTopWidth: 3 }}
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900">Weekly Plans</h3>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-500">Lessons remaining:</span>
+                        {incompleteWeeklyPlanCount > 0 ? (
+                          <span className="min-w-[1.5rem] h-6 px-2 rounded-full bg-red-600 text-white text-xs font-semibold flex items-center justify-center">
+                            {incompleteWeeklyPlanCount}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-green-600 font-medium">✓</span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <div className="w-full rounded-lg text-white px-4 py-2.5 text-sm font-medium text-center" style={{ backgroundColor: 'rgb(31, 134, 199)' }}>
-                    Complete weekly plans now!
-                  </div>
-                </Link>
+                    <div className="w-full rounded-lg text-white px-4 py-2 text-sm font-medium text-center" style={{ backgroundColor: 'rgb(31, 134, 199)' }}>
+                      Open Weekly Plans
+                    </div>
+                  </Link>
+
+                  {/* Resource Bookings Card */}
+                  <Link
+                    to="/admin/resource-bookings"
+                    className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-sm transition-all block"
+                    style={{ borderTopColor: '#ffc612', borderTopWidth: 3 }}
+                  >
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Resource Bookings</h3>
+                    <div className="w-full rounded-lg text-gray-900 px-4 py-2 text-sm font-medium text-center" style={{ backgroundColor: '#ffc612' }}>
+                      Library / ICT / Labs
+                    </div>
+                  </Link>
+                </div>
 
                 {/* 3. Class Announcements */}
                 <div className="bg-white rounded-xl border border-gray-200 p-5" style={{ borderTopColor: '#22c55e', borderTopWidth: 3 }}>
@@ -1615,17 +1630,6 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* 6. Resource Bookings */}
-                <Link
-                  to="/admin/resource-bookings"
-                  className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-sm transition-all block"
-                  style={{ borderTopColor: '#ffc612', borderTopWidth: 3 }}
-                >
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Library, ICT and Science Lab Bookings</h3>
-                  <div className="w-full rounded-lg text-white px-4 py-2 text-sm font-medium text-center" style={{ backgroundColor: '#ffc612' }}>
-                    Open Booking System
-                  </div>
-                </Link>
 
               </div>
             </div>
