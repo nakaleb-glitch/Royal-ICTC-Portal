@@ -1,0 +1,17 @@
+/* Absolute final table borders fix */
+* {
+  box-sizing: border-box;
+}
+
+table {
+  border-collapse: collapse !important;
+  width: 100% !important;
+}
+
+table th,
+table td {
+  border: 1px solid #9ca3af !important;
+  background-clip: padding-box !important;
+  position: relative;
+  z-index: 1;
+}
