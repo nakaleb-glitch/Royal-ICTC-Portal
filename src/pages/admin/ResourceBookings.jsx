@@ -86,10 +86,26 @@ const TIMETABLE = [
 
 const DAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']
 
+const getCurrentWeekIndex = () => {
+  // Check for debug override
+  const override = sessionStorage.getItem('debug_week_override')
+  if (override !== null) {
+    const idx = Number(override)
+    if (idx >= 0 && idx < ALL_WEEKS.length) return idx
+  }
+
+  const today = new Date()
+  // Default to Week 0 for all dates before August 2026
+  if (today < new Date('2026-08-17')) return 0
+
+  // TODO: Implement actual date mapping
+  return 0
+}
+
 export default function ResourceBookings() {
   const navigate = useNavigate()
   const { user, profile } = useAuth()
-  const [selectedWeek, setSelectedWeek] = useState(ALL_WEEKS[0].week)
+  const [selectedWeek, setSelectedWeek] = useState(getCurrentWeekIndex())
   const [selectedLocation, setSelectedLocation] = useState('library')
   const [bookings, setBookings] = useState({})
   const [showBookingModal, setShowBookingModal] = useState(false)
@@ -207,14 +223,14 @@ export default function ResourceBookings() {
 
       {/* Location Tabs */}
       <div className="bg-white rounded-xl border border-gray-200 mb-6">
-        <div className="flex gap-1 border-b border-gray-200 overflow-x-auto">
+        <div className="grid grid-cols-5 border-b border-gray-200">
           {LOCATIONS.map(location => (
             <button
               key={location.id}
               onClick={() => setSelectedLocation(location.id)}
-              className={`px-5 py-3 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
+              className={`py-3 text-sm font-medium transition-colors border-b-2 ${
                 selectedLocation === location.id
-                  ? 'border-blue-600 text-blue-600'
+                  ? 'border-[#ffc612] bg-[#fff9e6] text-[#b45309] font-semibold'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
               }`}
             >
