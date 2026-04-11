@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useContext } from 'react'
 import Layout from '../../components/Layout'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../contexts/AuthContext'
 
 // School official week calendar - matching system standard
 const PARTICIPATION_WEEK_SCHEDULE = {
@@ -73,18 +74,14 @@ const LOCATIONS = [
 const TIMETABLE = [
   { period: 1, primary: '08:00 - 08:35', secondary: '08:00 - 08:40', label: 'Period 1' },
   { period: 2, primary: '08:35 - 09:10', secondary: '08:45 - 09:25', label: 'Period 2' },
-  { period: null, primary: '09:10 - 09:30', secondary: '', label: 'Morning Recess (P)', isBreak: true },
   { period: 3, primary: '09:30 - 10:05', secondary: '09:30 - 10:10', label: 'Period 3' },
-  { period: null, primary: '', secondary: '10:10 - 10:25', label: 'Morning Recess (S)', isBreak: true },
   { period: 4, primary: '10:05 - 10:40', secondary: '10:25 - 11:05', label: 'Period 4' },
   { period: 5, primary: '10:40 - 11:15', secondary: '11:10 - 11:50', label: 'Period 5' },
   { period: null, primary: '11:30 - 13:00', secondary: '11:50 - 13:20', label: 'Lunch - Nap Time', isBreak: true },
   { period: 6, primary: '13:30 - 14:05', secondary: '13:30 - 14:10', label: 'Period 6' },
   { period: 7, primary: '14:05 - 14:40', secondary: '14:15 - 14:55', label: 'Period 7' },
-  { period: null, primary: '14:40 - 15:20', secondary: '14:55 - 15:20', label: 'Afternoon Snack', isBreak: true },
   { period: 8, primary: '15:20 - 15:55', secondary: '15:20 - 16:00', label: 'Period 8' },
   { period: 9, primary: '15:55 - 16:30', secondary: '16:05 - 16:45', label: 'Period 9' },
-  { period: null, primary: '16:30 - 17:00', secondary: '16:45 - 17:00', label: 'Parents Pick Up', isBreak: true },
 ]
 
 const DAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']
@@ -211,8 +208,8 @@ export default function ResourceBookings() {
           <tbody>
             {TIMETABLE.map((row, idx) => (
               <tr key={idx} className={row.isBreak ? 'bg-gray-50' : 'border-b border-gray-100'}>
-                <td className="px-3 py-2 border-r border-gray-100">
-                  <div className="font-medium text-gray-900">{row.label}</div>
+                <td className={`px-3 py-2 border-r border-gray-100 ${row.isBreak ? 'text-center font-medium text-red-600' : ''}`}>
+                  <div className="font-medium">{row.label}</div>
                   {row.period && (
                     <div className="text-xs text-gray-500 mt-0.5">
                       Primary: {row.primary}
