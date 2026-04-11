@@ -122,6 +122,9 @@ export default function ResourceBookings() {
   const [blockLocation, setBlockLocation] = useState('library')
   const [blockSlots, setBlockSlots] = useState({})
   const [blockedPeriods, setBlockedPeriods] = useState({})
+  const [showClearModal, setShowClearModal] = useState(false)
+  const [clearWeek, setClearWeek] = useState(0)
+  const [clearLocation, setClearLocation] = useState('library')
 
   const currentWeek = ALL_WEEKS.find(w => w.week === selectedWeek)
   const currentLocation = LOCATIONS.find(l => l.id === selectedLocation)
@@ -214,24 +217,10 @@ export default function ResourceBookings() {
               </button>
               
               <button
-                onClick={async () => {
-                  if (!confirm(`⚠️ WARNING: This will DELETE ALL bookings for ${currentLocation.name} from Week ${selectedWeek} AND ALL FUTURE WEEKS. This includes both normal bookings AND blocked periods.\n\nThis action CANNOT be undone.\n\nAre you absolutely sure you want to continue?`)) {
-                    return
-                  }
-                  
-                  setSaving(true)
-                  
-                  const { count } = await supabase
-                    .from('resource_bookings')
-                    .delete()
-                    .gte('week', selectedWeek)
-                    .eq('location_id', selectedLocation)
-                    .select('count', { count: 'exact', head: true })
-                  
-                  setSaving(false)
-                  fetchBookings()
-                  
-                  alert(`✅ Successfully cleared ${count} bookings from Week ${selectedWeek} and all future weeks.`)
+                onClick={() => {
+                  setClearWeek(selectedWeek)
+                  setClearLocation(selectedLocation)
+                  setShowClearModal(true)
                 }}
                 disabled={saving}
                 className="text-white px-4 py-1.5 rounded-lg hover:opacity-90 transition-opacity text-sm font-medium bg-black"
@@ -605,6 +594,101 @@ export default function ResourceBookings() {
                 style={{ backgroundColor: '#d1232a' }}
               >
                 {saving ? 'Saving...' : 'Block Periods'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Clear Future Bookings Modal */}
+    {showClearModal && (
+      <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4">
+        <div className="w-full max-w-xl bg-white rounded-xl border border-gray-200 p-5">
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div>
+              <h4 className="text-base font-semibold text-gray-900">Clear All Future Bookings</h4>
+              <p className="text-xs text-gray-500 mt-1">
+                Permanently delete ALL bookings and blocked periods from selected week onwards.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowClearModal(false)}
+              className="text-gray-400 hover:text-gray-600"
+              aria-label="Close clear modal"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Start Week</label>
+                <select
+                  value={clearWeek}
+                  onChange={(e) => setClearWeek(Number(e.target.value))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                >
+                  {ALL_WEEKS.map((w, i) => (
+                    <option key={w.week} value={i}>{w.label} - {w.range}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Location</label>
+                <select
+                  value={clearLocation}
+                  onChange={(e) => setClearLocation(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                >
+                  {LOCATIONS.map(loc => (
+                    <option key={loc.id} value={loc.id}>{loc.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="bg-red-50 rounded-lg border border-red-200 p-4">
+              <div className="text-sm font-semibold text-red-800 mb-2">⚠️ WARNING - DESTRUCTIVE ACTION</div>
+              <div className="text-xs text-red-700 space-y-1">
+                <p>This will <strong>DELETE ALL</strong> bookings including both normal bookings and blocked periods.</p>
+                <p>Applies to <strong>every week from Week {clearWeek} to Week 39</strong>.</p>
+                <p><strong>This action cannot be undone.</strong></p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowClearModal(false)}
+                className="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setSaving(true)
+
+                  const { count } = await supabase
+                    .from('resource_bookings')
+                    .delete()
+                    .gte('week', clearWeek)
+                    .eq('location_id', clearLocation)
+                    .select('count', { count: 'exact', head: true })
+
+                  setShowClearModal(false)
+                  setSaving(false)
+                  fetchBookings()
+
+                  alert(`✅ Successfully cleared ${count} total bookings from Week ${clearWeek} and all future weeks.`)
+                }}
+                disabled={saving}
+                className="flex-1 px-4 py-2 rounded-lg text-white text-sm font-medium bg-black"
+              >
+                {saving ? 'Clearing...' : 'Clear All Future'}
               </button>
             </div>
           </div>
