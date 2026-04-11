@@ -47,7 +47,7 @@ function AppRoutes() {
       <Route path="/admin/behavior-management" element={<ProtectedRoute adminOnly><BehaviorManagement /></ProtectedRoute>} />
       <Route path="/admin/gradebooks" element={<ProtectedRoute adminOnly><GradebookViewer /></ProtectedRoute>} />
       <Route path="/admin/student-gradebook-lookup" element={<ProtectedRoute adminOnly><StudentGradebookLookup /></ProtectedRoute>} />
-      <Route path="/admin/resource-bookings" element={<ProtectedRoute adminOnly><ResourceBookings /></ProtectedRoute>} />
+      <Route path="/admin/resource-bookings" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><ResourceBookings /></ProtectedRoute>} />
       <Route path="/weekly-plans" element={<ProtectedRoute><WeeklyPlans /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/login" />} />
     </Routes>

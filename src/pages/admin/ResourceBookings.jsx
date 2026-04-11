@@ -178,10 +178,7 @@ export default function ResourceBookings() {
           </button>
         </div>
 
-        <h2 className="text-2xl font-bold text-gray-900">Resource Booking System</h2>
-        <p className="text-gray-500 text-sm mt-1">
-          Book school facilities and resources
-        </p>
+        <h2 className="text-2xl font-bold text-gray-900">Library, ICT and Science Lab Bookings</h2>
       </div>
 
       {/* Week Selector */}
