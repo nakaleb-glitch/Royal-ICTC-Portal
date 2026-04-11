@@ -58,6 +58,10 @@ export default function StudentGradebookLookup() {
   const [selectedComment, setSelectedComment] = useState(null)
   const attributeNames = ['confident', 'responsible', 'reflective', 'innovative', 'engaged']
 
+  // Helper to find current class
+  const currentClass = classes.find(c => c.id === selectedSubject)
+  const currentGrades = subjectGradeCache[selectedSubject] || {}
+
   // Auto-refresh grade data when term changes
   useEffect(() => {
     if (student) {
@@ -106,93 +110,101 @@ export default function StudentGradebookLookup() {
 
       const allSubjectPromises = sorted.map(async (subjectClass) => {
         const [
-          { data: participationData },
-          { data: assignmentData },
-          { data: progressTestData },
+          { data: partData },
+          { data: ptData },
+          { data: assignData },
+          { data: assignGrades },
           { data: attributesData }
         ] = await Promise.all([
-          supabase.from('participation_grades').select('score').eq('class_id', subjectClass.id).eq('term', selectedTerm).eq('student_id', studentData.id).maybeSingle(),
-          supabase.from('assignments').select('id, max_points').eq('class_id', subjectClass.id).eq('term', selectedTerm),
+          supabase.from('participation_grades').select('term, week, score, comment').eq('class_id', subjectClass.id).eq('term', selectedTerm).eq('student_id', studentData.id),
           supabase.from('progress_test_grades').select('*').eq('class_id', subjectClass.id).eq('term', selectedTerm).eq('student_id', studentData.id).maybeSingle(),
+          supabase.from('assignments').select('*').eq('class_id', subjectClass.id).eq('term', selectedTerm).order('created_at'),
+          supabase.from('assignment_grades').select('*, comment').eq('student_id', studentData.id),
           supabase.from('student_attributes').select('*').eq('class_id', subjectClass.id).eq('term', selectedTerm).eq('student_id', studentData.id).maybeSingle()
         ])
 
-        let assignmentGradesData = []
-        if (assignmentData?.length > 0) {
-          const assignmentIds = assignmentData.map(a => a.id)
-          const { data: agData } = await supabase.from('assignment_grades').select('score').in('assignment_id', assignmentIds).eq('student_id', studentData.id)
-          assignmentGradesData = agData || []
-        }
+        // Process assignments
+        const assignmentMap = Object.fromEntries((assignData || []).map((a) => [a.id, a]))
+        const markedAssignments = (assignGrades || [])
+          .map((g) => {
+            const a = assignmentMap[g.assignment_id]
+            if (!a) return null
+            if (g.score == null || a.max_points == null || Number(a.max_points) <= 0) return null
+            return {
+              id: `${a.id}_${g.id}`,
+              term: a.term,
+              name: a.name,
+              score: g.score,
+              max_points: a.max_points,
+              percent: (Number(g.score) / Number(a.max_points)) * 100,
+              comment: g.comment,
+            }
+          })
+          .filter(Boolean)
 
-        const participation = participationData?.score != null ? participationData.score * 10 : null
-        
-        let attainment = null
-        if (assignmentData?.length > 0 && assignmentGradesData.length > 0) {
-          const totalScore = assignmentGradesData.reduce((sum, g) => sum + (g.score || 0), 0)
-          const totalMax = assignmentData.reduce((sum, a) => sum + (a.max_points || 0), 0)
-          attainment = totalMax > 0 ? (totalScore / totalMax) * 100 : null
-        }
+        // Calculate averages
+        const part = partData
+          .filter((r) => r.score != null)
+          .map((r) => Number(r.score))
+        const partPct = part.length ? avg(part) * 10 : null
 
-        let calculatedAttainment = null
-        if (participation != null && attainment != null) {
-          calculatedAttainment = (participation * 0.2) + (attainment * 0.8)
-        } else if (attainment != null) {
-          calculatedAttainment = attainment
-        }
+        const assignPcts = markedAssignments
+          .filter((a) => a.term === selectedTerm)
+          .map((a) => a.percent)
+        const assignAvg = avg(assignPcts)
 
-        let progressTest = null
-        let progressTestRW = null
-        let progressTestListening = null
-        let progressTestSpeaking = null
-        let comment = null
+        const attainment = partPct != null && assignAvg != null
+          ? (partPct * 0.20) + (assignAvg * 0.80)
+          : partPct != null ? partPct * 0.20
+          : assignAvg != null ? assignAvg * 0.80
+          : null
 
-        if (progressTestData) {
-          comment = progressTestData.comment
+        let ptOverall = null
+        if (ptData) {
           if (subjectClass.subject === 'ESL') {
             const components = []
-            if (progressTestData.reading_writing_score != null && progressTestData.reading_writing_total > 0) {
-              progressTestRW = (progressTestData.reading_writing_score / progressTestData.reading_writing_total) * 100
-              components.push(progressTestRW)
+            if (ptData.reading_writing_score != null && ptData.reading_writing_total > 0) {
+              components.push((ptData.reading_writing_score / ptData.reading_writing_total) * 100)
             }
-            if (progressTestData.listening_score != null && progressTestData.listening_total > 0) {
-              progressTestListening = (progressTestData.listening_score / progressTestData.listening_total) * 100
-              components.push(progressTestListening)
+            if (ptData.listening_score != null && ptData.listening_total > 0) {
+              components.push((ptData.listening_score / ptData.listening_total) * 100)
             }
-            if (progressTestData.speaking_score != null && progressTestData.speaking_total > 0) {
-              progressTestSpeaking = (progressTestData.speaking_score / progressTestData.speaking_total) * 100
-              components.push(progressTestSpeaking)
+            if (ptData.speaking_score != null && ptData.speaking_total > 0) {
+              components.push((ptData.speaking_score / ptData.speaking_total) * 100)
             }
             if (components.length === 3) {
-              progressTest = avg(components)
+              ptOverall = avg(components)
             }
           } else {
-            if (progressTestData.score != null && progressTestData.total_points > 0) {
-              progressTest = (progressTestData.score / progressTestData.total_points) * 100
+            if (ptData.score != null && ptData.total_points > 0) {
+              ptOverall = (ptData.score / ptData.total_points) * 100
             }
           }
         }
 
         let overall = null
-        if (calculatedAttainment != null && progressTest != null) {
-          overall = (calculatedAttainment * 0.75) + (progressTest * 0.25)
-        } else if (calculatedAttainment != null) {
-          overall = calculatedAttainment
+        if (attainment != null && ptOverall != null) {
+          overall = (attainment * 0.75) + (ptOverall * 0.25)
+        } else if (attainment != null) {
+          overall = attainment
+        } else if (ptOverall != null) {
+          overall = ptOverall
         }
 
         return {
           classId: subjectClass.id,
           grades: {
-            participation,
+            participationScores: partData || [],
+            assignments: markedAssignments,
+            progressTest: ptData,
+            
+            partPct,
+            assignAvg,
             attainment,
-            calculatedAttainment,
-            progressTest,
-            progressTestRW,
-            progressTestListening,
-            progressTestSpeaking,
+            progressTestOverall: ptOverall,
             overall,
             letterGrade: letterGradeFromPercentage(overall),
-            attributes: attributesData || {},
-            comment
+            attributes: attributesData || {}
           }
         }
       })
@@ -316,36 +328,36 @@ export default function StudentGradebookLookup() {
                 ))}
               </div>
 
-              {selectedSubject && subjectGradeCache[selectedSubject] && (
+              {currentClass && currentGrades && (
                 <div>
                   <div className="bg-white rounded-xl border border-gray-200 p-5" style={{ borderTopColor: '#1f86c7', borderTopWidth: 3 }}>
                     <h3 className="font-semibold text-gray-900 mb-3">Overall Calculation</h3>
                     <div className="grid grid-cols-[88px_1fr_1fr_1fr] gap-3">
                       {/* Letter Grade */}
                       <div className="rounded-lg border flex items-center justify-center aspect-square" style={
-                        subjectGradeCache[selectedSubject].letterGrade === 'A*' || subjectGradeCache[selectedSubject].letterGrade === 'A' ? { borderColor: '#22c55e', backgroundColor: '#22c55e1A' }
-                        : subjectGradeCache[selectedSubject].letterGrade === 'B' ? { borderColor: '#3b82f6', backgroundColor: '#3b82f61A' }
-                        : subjectGradeCache[selectedSubject].letterGrade === 'C' ? { borderColor: '#f59e0b', backgroundColor: '#f59e0b1A' }
+                        currentGrades.letterGrade === 'A*' || currentGrades.letterGrade === 'A' ? { borderColor: '#22c55e', backgroundColor: '#22c55e1A' }
+                        : currentGrades.letterGrade === 'B' ? { borderColor: '#3b82f6', backgroundColor: '#3b82f61A' }
+                        : currentGrades.letterGrade === 'C' ? { borderColor: '#f59e0b', backgroundColor: '#f59e0b1A' }
                         : { borderColor: '#ef4444', backgroundColor: '#ef44441A' }
                       }>
                         <div className="text-4xl font-bold" style={
-                          subjectGradeCache[selectedSubject].letterGrade === 'A*' || subjectGradeCache[selectedSubject].letterGrade === 'A' ? { color: '#22c55e' }
-                          : subjectGradeCache[selectedSubject].letterGrade === 'B' ? { color: '#3b82f6' }
-                          : subjectGradeCache[selectedSubject].letterGrade === 'C' ? { color: '#f59e0b' }
+                          currentGrades.letterGrade === 'A*' || currentGrades.letterGrade === 'A' ? { color: '#22c55e' }
+                          : currentGrades.letterGrade === 'B' ? { color: '#3b82f6' }
+                          : currentGrades.letterGrade === 'C' ? { color: '#f59e0b' }
                           : { color: '#ef4444' }
                         }>
-                          {subjectGradeCache[selectedSubject].letterGrade || '—'}
+                          {currentGrades.letterGrade || '—'}
                         </div>
                       </div>
 
                       {/* Overall */}
                       <div className="rounded-lg border p-3" style={{ borderColor: '#1f86c7', backgroundColor: '#1f86c71A' }}>
                         <div className="text-gray-500 text-xs mb-2">Overall</div>
-                        <div className="font-semibold text-gray-900 text-xl">{fmt(subjectGradeCache[selectedSubject].overall)}{subjectGradeCache[selectedSubject].overall != null ? '%' : ''}</div>
+                        <div className="font-semibold text-gray-900 text-xl">{fmt(currentGrades.overall)}{currentGrades.overall != null ? '%' : ''}</div>
                         <div className="mt-2 h-2 rounded-full bg-gray-200 overflow-hidden">
                           <div
                             className="h-full rounded-full"
-                            style={{ width: `${Math.max(0, Math.min(100, subjectGradeCache[selectedSubject].overall || 0))}%`, backgroundColor: '#1f86c7' }}
+                            style={{ width: `${Math.max(0, Math.min(100, currentGrades.overall || 0))}%`, backgroundColor: '#1f86c7' }}
                           />
                         </div>
                       </div>
@@ -353,11 +365,11 @@ export default function StudentGradebookLookup() {
                       {/* Attainment */}
                       <div className="rounded-lg border p-3" style={{ borderColor: '#d1232a', backgroundColor: '#d1232a1A' }}>
                         <div className="text-gray-500 text-xs mb-2">Attainment</div>
-                        <div className="font-semibold text-gray-900 text-xl">{fmt(subjectGradeCache[selectedSubject].calculatedAttainment)}{subjectGradeCache[selectedSubject].calculatedAttainment != null ? '%' : ''}</div>
+                        <div className="font-semibold text-gray-900 text-xl">{fmt(currentGrades.attainment)}{currentGrades.attainment != null ? '%' : ''}</div>
                         <div className="mt-2 h-2 rounded-full bg-gray-200 overflow-hidden">
                           <div
                             className="h-full rounded-full"
-                            style={{ width: `${Math.max(0, Math.min(100, subjectGradeCache[selectedSubject].calculatedAttainment || 0))}%`, backgroundColor: '#d1232a' }}
+                            style={{ width: `${Math.max(0, Math.min(100, currentGrades.attainment || 0))}%`, backgroundColor: '#d1232a' }}
                           />
                         </div>
                       </div>
@@ -365,79 +377,104 @@ export default function StudentGradebookLookup() {
                       {/* Progress Test */}
                       <div className="rounded-lg border p-3" style={{ borderColor: '#ffc612', backgroundColor: '#ffc6121A' }}>
                         <div className="text-gray-500 text-xs mb-2">Progress Test</div>
-                        <div className="font-semibold text-gray-900 text-xl">{fmt(subjectGradeCache[selectedSubject].progressTest)}{subjectGradeCache[selectedSubject].progressTest != null ? '%' : ''}</div>
+                        <div className="font-semibold text-gray-900 text-xl">{fmt(currentGrades.progressTestOverall)}{currentGrades.progressTestOverall != null ? '%' : ''}</div>
                         <div className="mt-2 h-2 rounded-full bg-gray-200 overflow-hidden">
                           <div
                             className="h-full rounded-full"
-                            style={{ width: `${Math.max(0, Math.min(100, subjectGradeCache[selectedSubject].progressTest || 0))}%`, backgroundColor: '#ffc612' }}
+                            style={{ width: `${Math.max(0, Math.min(100, currentGrades.progressTestOverall || 0))}%`, backgroundColor: '#ffc612' }}
                           />
                         </div>
                       </div>
                     </div>
                   </div>
 
+                  {/* Full Detail Cards - Exactly matching student view */}
                   <div className="mt-6 grid grid-cols-3 gap-6">
                     {/* Participation */}
                     <div className="bg-white rounded-xl border border-gray-200 p-5" style={{ borderTopColor: '#d1232a', borderTopWidth: 3 }}>
                       <h3 className="font-semibold text-gray-900 mb-3">Participation</h3>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center justify-between border-b border-gray-100 pb-1">
-                          <span className="text-gray-600">Score</span>
-                          <span className="font-medium text-gray-900">{fmt(subjectGradeCache[selectedSubject].participation)}{subjectGradeCache[selectedSubject].participation != null ? '%' : '—'}</span>
+                      {currentGrades.participationScores?.length === 0 ? (
+                        <p className="text-sm text-gray-400">No participation scores posted yet.</p>
+                      ) : (
+                        <div className="space-y-2 text-sm">
+                          {currentGrades.participationScores?.map((row) => (
+                            <div key={`${row.term}_${row.week}`} className="flex items-center justify-between border-b border-gray-100 pb-1 cursor-pointer hover:bg-gray-50 -mx-2 px-2 py-1 rounded" onClick={() => row.comment && setSelectedComment(row.comment)}>
+                              <span className="text-gray-600 flex items-center gap-2">
+                                Week {row.week}
+                                {row.comment && <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-blue-500 text-white text-[8px]">💬</span>}
+                              </span>
+                              <span className="font-medium text-gray-900">{row.score}/10</span>
+                            </div>
+                          ))}
                         </div>
-                      </div>
+                      )}
                     </div>
 
-                    {/* Attainment Breakdown */}
+                    {/* Marked Assignments */}
                     <div className="bg-white rounded-xl border border-gray-200 p-5" style={{ borderTopColor: '#d1232a', borderTopWidth: 3 }}>
-                      <h3 className="font-semibold text-gray-900 mb-3">Attainment</h3>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center justify-between border-b border-gray-100 pb-1">
-                          <span className="text-gray-600">Participation (20%)</span>
-                          <span className="font-medium text-gray-900">{fmt(subjectGradeCache[selectedSubject].participation)}{subjectGradeCache[selectedSubject].participation != null ? '%' : '—'}</span>
+                      <h3 className="font-semibold text-gray-900 mb-3">Marked Assignments</h3>
+                      {currentGrades.assignments?.length === 0 ? (
+                        <p className="text-sm text-gray-400">No marked assignments yet.</p>
+                      ) : (
+                        <div className="space-y-2 text-sm">
+                          {currentGrades.assignments?.map((row) => (
+                            <div key={row.id} className="border-b border-gray-100 pb-1 cursor-pointer hover:bg-gray-50 -mx-2 px-2 py-1 rounded" onClick={() => row.comment && setSelectedComment(row.comment)}>
+                              <div className="text-gray-700 flex items-center gap-2">
+                                {row.name}
+                                {row.comment && <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-blue-500 text-white text-[8px]">💬</span>}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {row.score}/{row.max_points} ({fmt(row.percent)}%)
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                        <div className="flex items-center justify-between border-b border-gray-100 pb-1">
-                          <span className="text-gray-600">Assignments (80%)</span>
-                          <span className="font-medium text-gray-900">{fmt(subjectGradeCache[selectedSubject].attainment)}{subjectGradeCache[selectedSubject].attainment != null ? '%' : '—'}</span>
-                        </div>
-                      </div>
+                      )}
                     </div>
 
-                    {/* Progress Test Details */}
+                    {/* Progress Test */}
                     <div className="bg-white rounded-xl border border-gray-200 p-5" style={{ borderTopColor: '#ffc612', borderTopWidth: 3 }}>
                       <h3 className="font-semibold text-gray-900 mb-3">Progress Test</h3>
-                      {classes.find(c => c.id === selectedSubject)?.subject === 'ESL' ? (
+                      {!currentGrades.progressTest || currentGrades.progressTestOverall == null ? (
+                        <p className="text-sm text-gray-400">No progress test score posted yet.</p>
+                      ) : currentClass.subject === 'ESL' ? (
                         <div className="space-y-2 text-sm">
                           <div className="flex items-center justify-between border-b border-gray-100 pb-1">
                             <span className="text-gray-600">Reading & Writing</span>
-                            <span className="font-medium text-gray-900">{fmt(subjectGradeCache[selectedSubject].progressTestRW)}{subjectGradeCache[selectedSubject].progressTestRW != null ? '%' : '—'}</span>
+                            <span className="font-medium text-gray-900">
+                              {currentGrades.progressTest?.reading_writing_score ?? '—'}
+                              {currentGrades.progressTest?.reading_writing_total ? ` / ${currentGrades.progressTest.reading_writing_total}` : ''}
+                            </span>
                           </div>
                           <div className="flex items-center justify-between border-b border-gray-100 pb-1">
                             <span className="text-gray-600">Listening</span>
-                            <span className="font-medium text-gray-900">{fmt(subjectGradeCache[selectedSubject].progressTestListening)}{subjectGradeCache[selectedSubject].progressTestListening != null ? '%' : '—'}</span>
+                            <span className="font-medium text-gray-900">
+                              {currentGrades.progressTest?.listening_score ?? '—'}
+                              {currentGrades.progressTest?.listening_total ? ` / ${currentGrades.progressTest.listening_total}` : ''}
+                            </span>
                           </div>
                           <div className="flex items-center justify-between border-b border-gray-100 pb-1">
                             <span className="text-gray-600">Speaking</span>
-                            <span className="font-medium text-gray-900">{fmt(subjectGradeCache[selectedSubject].progressTestSpeaking)}{subjectGradeCache[selectedSubject].progressTestSpeaking != null ? '%' : '—'}</span>
+                            <span className="font-medium text-gray-900">
+                              {currentGrades.progressTest?.speaking_score ?? '—'}
+                              {currentGrades.progressTest?.speaking_total ? ` / ${currentGrades.progressTest.speaking_total}` : ''}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-600">Overall</span>
+                            <span className="font-medium text-gray-900">{fmt(currentGrades.progressTestOverall)}%</span>
                           </div>
                         </div>
                       ) : (
                         <div className="space-y-2 text-sm">
                           <div className="flex items-center justify-between">
-                            <span className="text-gray-600">Overall Score</span>
-                            <span className="font-medium text-gray-900">{fmt(subjectGradeCache[selectedSubject].progressTest)}{subjectGradeCache[selectedSubject].progressTest != null ? '%' : '—'}</span>
+                            <span className="text-gray-600">Overall</span>
+                            <span className="font-medium text-gray-900">{fmt(currentGrades.progressTestOverall)}%</span>
                           </div>
                         </div>
                       )}
                     </div>
                   </div>
-
-                  {subjectGradeCache[selectedSubject].comment && (
-                    <div className="mt-6 bg-white rounded-xl border border-gray-200 p-5">
-                      <h3 className="font-semibold text-gray-900 mb-3">Teacher Comment</h3>
-                      <p className="text-sm text-gray-700 whitespace-pre-wrap">{subjectGradeCache[selectedSubject].comment}</p>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
@@ -445,5 +482,29 @@ export default function StudentGradebookLookup() {
         </div>
       )}
     </Layout>
+
+    {/* Comment Modal */}
+    {selectedComment && (
+      <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4">
+        <div className="w-full max-w-md bg-white rounded-xl border border-gray-200 p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h4 className="text-base font-semibold text-gray-900">Teacher Comment</h4>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSelectedComment(null)}
+              className="text-gray-400 hover:text-gray-600"
+              aria-label="Close comment"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="mt-4">
+            <div className="text-sm text-gray-800 whitespace-pre-wrap">{selectedComment}</div>
+          </div>
+        </div>
+      </div>
+    )}
   )
 }
