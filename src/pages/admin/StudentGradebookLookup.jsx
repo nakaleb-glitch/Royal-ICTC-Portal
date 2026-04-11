@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import Layout from '../../components/Layout'
 import { useNavigate } from 'react-router-dom'
@@ -57,6 +57,13 @@ export default function StudentGradebookLookup() {
   const [selectedSubject, setSelectedSubject] = useState('')
   const [selectedComment, setSelectedComment] = useState(null)
   const attributeNames = ['confident', 'responsible', 'reflective', 'innovative', 'engaged']
+
+  // Auto-refresh grade data when term changes
+  useEffect(() => {
+    if (student) {
+      handleSearch()
+    }
+  }, [selectedTerm])
 
   const handleSearch = async () => {
     if (!studentId.trim()) return
