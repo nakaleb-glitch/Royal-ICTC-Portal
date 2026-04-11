@@ -918,7 +918,7 @@ export default function Dashboard() {
                 </Link>
                {/* Card 9 - YELLOW */}
                 <Link
-                  to="#"
+                  to="/admin/resource-bookings"
                   className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block min-h-[120px]"
                   style={{ borderTopColor: '#ffc612', borderTopWidth: 3 }}
                 >
