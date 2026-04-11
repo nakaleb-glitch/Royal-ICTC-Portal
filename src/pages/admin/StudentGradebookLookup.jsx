@@ -449,7 +449,6 @@ export default function StudentGradebookLookup() {
               )}
             </>
           )}
-      )}
 
       {/* Comment Modal */}
       {selectedComment && (
