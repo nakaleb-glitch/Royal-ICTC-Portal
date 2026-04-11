@@ -192,6 +192,15 @@ export default function ResourceBookings() {
           >
             ← Go Back
           </button>
+
+          {profile?.role === 'admin' && (
+            <button
+              className="text-white px-4 py-1.5 rounded-lg hover:opacity-90 transition-opacity text-sm font-medium"
+              style={{ backgroundColor: '#d1232a' }}
+            >
+              Block Periods
+            </button>
+          )}
         </div>
 
         <h2 className="text-2xl font-bold text-gray-900">Library, ICT and Science Lab Bookings</h2>
