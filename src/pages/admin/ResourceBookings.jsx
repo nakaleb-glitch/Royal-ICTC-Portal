@@ -239,7 +239,7 @@ export default function ResourceBookings() {
               onClick={() => setSelectedLocation(location.id)}
               className={`py-3 text-sm font-medium transition-colors border-b-2 ${
                 selectedLocation === location.id
-                  ? 'border-[#ffc612] bg-[#fff9e6] text-[#b45309] font-semibold'
+                  ? 'border-[#d1232a] bg-[#d1232a1a] text-[#d1232a] font-semibold'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
               }`}
             >
