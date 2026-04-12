@@ -1151,8 +1151,8 @@ export default function Dashboard() {
                       <div className="flex gap-2">
                         <select
                           value={debugDayOverride}
-                          onChange={e => setDebugDayOverride(Number(e.target.value))}
-                          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          disabled
+                          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-600"
                         >
                           {DAYS.map((dayName, idx) => (
                             <option key={idx} value={idx}>
