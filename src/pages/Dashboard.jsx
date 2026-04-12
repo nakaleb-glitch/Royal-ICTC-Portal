@@ -1072,7 +1072,12 @@ export default function Dashboard() {
                       <div className="flex gap-2">
                         <select
                           value={debugWeekOverride}
-                          onChange={e => setDebugWeekOverride(Number(e.target.value))}
+                          onChange={e => {
+                            const newWeekIdx = Number(e.target.value)
+                            setDebugWeekOverride(newWeekIdx)
+                            sessionStorage.setItem('debug_week_override', String(newWeekIdx))
+                            fetchDashboardData()
+                          }}
                           className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                           {ALL_WEEKS.map((weekItem, idx) => (
@@ -1081,15 +1086,6 @@ export default function Dashboard() {
                             </option>
                           ))}
                         </select>
-                        <button
-                          onClick={() => {
-                            sessionStorage.setItem('debug_week_override', String(debugWeekOverride))
-                            fetchDashboardData()
-                          }}
-                          className="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700"
-                        >
-                          Apply
-                        </button>
                         <button
                           onClick={() => {
                             sessionStorage.removeItem('debug_week_override')
