@@ -17,6 +17,7 @@ import BehaviorReport from './pages/BehaviorReport'
 import StudentClassDetail from './pages/StudentClassDetail'
 import StudentGradebookLookup from './pages/admin/StudentGradebookLookup'
 import ResourceBookings from './pages/admin/ResourceBookings'
+import TeacherSchedules from './pages/admin/TeacherSchedules'
 
 const ProtectedRoute = ({ children, adminOnly = false, allowedRoles = null }) => {
   const { user, profile, loading } = useAuth()
@@ -48,6 +49,7 @@ function AppRoutes() {
       <Route path="/admin/gradebooks" element={<ProtectedRoute adminOnly><GradebookViewer /></ProtectedRoute>} />
       <Route path="/admin/student-gradebook-lookup" element={<ProtectedRoute adminOnly><StudentGradebookLookup /></ProtectedRoute>} />
       <Route path="/admin/resource-bookings" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><ResourceBookings /></ProtectedRoute>} />
+      <Route path="/admin/teacher-schedules" element={<ProtectedRoute adminOnly><TeacherSchedules /></ProtectedRoute>} />
       <Route path="/weekly-plans" element={<ProtectedRoute><WeeklyPlans /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/login" />} />
     </Routes>

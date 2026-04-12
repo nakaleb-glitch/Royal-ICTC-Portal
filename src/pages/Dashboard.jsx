@@ -925,6 +925,16 @@ export default function Dashboard() {
                   <div className="font-semibold text-gray-900">Library & ICT & Science Lab Booking Management</div>
                   <div className="text-sm text-gray-500 mt-1">Review and edit booking requests.</div>
                 </Link>
+                
+                {/* Card 10 - RED */}
+                <Link
+                  to="/admin/teacher-schedules"
+                  className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all block min-h-[120px]"
+                  style={{ borderTopColor: '#d1232a', borderTopWidth: 3 }}
+                >
+                  <div className="font-semibold text-gray-900">Teacher Schedule Management</div>
+                  <div className="text-sm text-gray-500 mt-1">Create and manage teacher schedules.</div>
+                </Link>
             </div>
           </div>
 
