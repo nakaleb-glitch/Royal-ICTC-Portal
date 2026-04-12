@@ -192,11 +192,16 @@ export default function ClassDetail() {
   }, [activeWeek])
 
   const fetchClass = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('classes')
-      .select('*, users(full_name, email)')
+      .select('*, users!classes_teacher_id_fkey(full_name, email)')
       .eq('id', classId)
       .single()
+    
+    if (error) {
+      console.error('Failed to load class:', error)
+    }
+    
     setCls(data)
     setLoading(false)
   }
