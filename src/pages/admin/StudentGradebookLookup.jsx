@@ -95,7 +95,7 @@ export default function StudentGradebookLookup() {
 
       const { data: enrollments } = await supabase
         .from('class_students')
-        .select('class_id, classes(*, users(full_name))')
+        .select('class_id, classes(*, users!classes_teacher_id_fkey(full_name))')
         .eq('student_id', studentData.id)
 
       const studentClasses = enrollments?.map(e => e.classes).filter(Boolean) || []
