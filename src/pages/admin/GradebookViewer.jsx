@@ -112,7 +112,7 @@ export default function GradebookViewer() {
       setStudentData([])
       setSubjectGradeCache({})
     }
-  }, [selectedHomeroom, selectedTerm])
+  }, [selectedHomeroom, selectedTerm, sortedClasses])
 
   // Auto-select ESL when data is loaded
   useEffect(() => {
