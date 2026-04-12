@@ -1167,6 +1167,19 @@ export default function Dashboard() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+
+              {/* My Schedule Card */}
+              <Link
+                to="/admin/teacher-schedule-view"
+                className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-sm transition-all block"
+                style={{ borderTopColor: '#16a34a', borderTopWidth: 3 }}
+              >
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">My Schedule</h3>
+                <p className="text-xs text-gray-500 mb-4">View your weekly teaching schedule</p>
+                <div className="w-full rounded-lg text-white px-4 py-2 text-sm font-medium text-center" style={{ backgroundColor: '#16a34a' }}>
+                  View my schedule
+                </div>
+              </Link>
               
               {/* LEFT COLUMN: My Classes ONLY */}
               <div className="bg-white rounded-xl border border-gray-200 p-5" style={{ borderTopColor: CARD_ACCENT.class, borderTopWidth: 3 }}>

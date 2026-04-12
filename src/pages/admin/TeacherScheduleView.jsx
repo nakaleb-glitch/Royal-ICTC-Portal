@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Layout from '../../components/Layout'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../contexts/AuthContext'
 
 const PRIMARY_TIMETABLE = [
   { period: 1, time: '08:00 - 08:35', label: 'Period 1', type: 'class' },
@@ -37,6 +38,7 @@ const DAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']
 
 export default function TeacherScheduleView() {
   const navigate = useNavigate()
+  const { profile } = useAuth()
   const [schedules, setSchedules] = useState({})
   const [teachers, setTeachers] = useState([])
   const [selectedTeacher, setSelectedTeacher] = useState(null)
@@ -44,7 +46,12 @@ export default function TeacherScheduleView() {
 
   useEffect(() => {
     fetchTeachers()
-  }, [])
+    
+    // Auto load logged in teacher's schedule if user is a teacher
+    if (profile && profile.role === 'teacher') {
+      setSelectedTeacher(profile.id)
+    }
+  }, [profile])
 
   useEffect(() => {
     if (selectedTeacher) {
@@ -117,49 +124,57 @@ export default function TeacherScheduleView() {
             ← Go Back
           </button>
 
-          <button
-            onClick={() => navigate('/admin/teacher-schedules')}
-            className="text-white px-4 py-1.5 rounded-lg hover:opacity-90 transition-opacity text-sm font-medium"
-            style={{ backgroundColor: '#1f86c7' }}
-          >
-            ← Edit Master Schedule
-          </button>
-        </div>
-
-        <h2 className="text-2xl font-bold text-gray-900">Teacher Schedule View</h2>
-        <p className="text-sm text-gray-500 mt-1">Select a teacher to view their full weekly timetable.</p>
-      </div>
-
-      {/* Teacher Selector */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
-        <div className="flex items-center gap-6">
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Select Teacher</label>
-            <select
-              value={selectedTeacher || ''}
-              onChange={(e) => setSelectedTeacher(e.target.value || null)}
-              className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          {profile?.role === 'admin' && (
+            <button
+              onClick={() => navigate('/admin/teacher-schedules')}
+              className="text-white px-4 py-1.5 rounded-lg hover:opacity-90 transition-opacity text-sm font-medium"
+              style={{ backgroundColor: '#1f86c7' }}
             >
-              <option value="">-- Choose a teacher --</option>
-              {teachers.map(teacher => (
-                <option key={teacher.id} value={teacher.id}>
-                  {teacher.full_name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {selectedTeacher && teacherLevel && (
-            <div className={`px-4 py-2 rounded-full font-semibold text-sm text-white ${
-              teacherLevel === 'primary' 
-                ? 'bg-green-600' 
-                : 'bg-blue-600'
-            }`}>
-              {teacherLevel.charAt(0).toUpperCase() + teacherLevel.slice(1)}
-            </div>
+              ← Edit Master Schedule
+            </button>
           )}
         </div>
+
+        <h2 className="text-2xl font-bold text-gray-900">
+          {profile?.role === 'teacher' ? 'My Schedule' : 'Teacher Schedule View'}
+        </h2>
+        <p className="text-sm text-gray-500 mt-1">
+          {profile?.role === 'teacher' ? 'Your weekly teaching schedule.' : 'Select a teacher to view their full weekly timetable.'}
+        </p>
       </div>
+
+        {/* Teacher Selector - Only show for admins */}
+        {profile?.role === 'admin' && (
+          <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
+            <div className="flex items-center gap-6">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Select Teacher</label>
+                <select
+                  value={selectedTeacher || ''}
+                  onChange={(e) => setSelectedTeacher(e.target.value || null)}
+                  className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">-- Choose a teacher --</option>
+                  {teachers.map(teacher => (
+                    <option key={teacher.id} value={teacher.id}>
+                      {teacher.full_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedTeacher && teacherLevel && (
+                <div className={`px-4 py-2 rounded-full font-semibold text-sm text-white ${
+                  teacherLevel === 'primary' 
+                    ? 'bg-green-600' 
+                    : 'bg-blue-600'
+                }`}>
+                  {teacherLevel.charAt(0).toUpperCase() + teacherLevel.slice(1)}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
       {selectedTeacher ? (
         <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
