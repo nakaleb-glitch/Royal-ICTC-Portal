@@ -128,13 +128,16 @@ export default function TeacherSchedules() {
 
     setSaving(false)
     setEditingCell(null)
-    
-    // Final refresh to confirm database state
-    fetchSchedules()
   }
 
   const clearSchedule = async () => {
     setSaving(true)
+    
+    // Update local state immediately
+    const newSchedules = { ...schedules }
+    delete newSchedules[`${editingCell.className}-${editingCell.day}-${editingCell.period}`]
+    setSchedules(newSchedules)
+    
     await supabase
       .from('teacher_schedules')
       .delete()
@@ -142,9 +145,9 @@ export default function TeacherSchedules() {
       .eq('class_name', editingCell.className)
       .eq('day', editingCell.day)
       .eq('period', editingCell.period)
+      
     setSaving(false)
     setEditingCell(null)
-    fetchSchedules()
   }
 
   const getTeacherName = (id) => {
