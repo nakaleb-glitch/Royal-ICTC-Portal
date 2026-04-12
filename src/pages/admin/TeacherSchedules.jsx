@@ -38,11 +38,13 @@ export default function TeacherSchedules() {
   const [showCsvHelp, setShowCsvHelp] = useState(false)
   const [statusMessage, setStatusMessage] = useState(null)
   const [confirmClear, setConfirmClear] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState(null)
 
   useEffect(() => {
     fetchTeachers()
     fetchClasses()
     fetchSchedules()
+    fetchLastUpdated()
   }, [selectedLevel])
 
   const fetchTeachers = async () => {
@@ -174,6 +176,7 @@ export default function TeacherSchedules() {
         .eq('level', selectedLevel)
       
       await fetchSchedules()
+      await fetchLastUpdated()
       
       setStatusMessage({ type: 'success', text: `All ${selectedLevel} schedules have been cleared` })
       setConfirmClear(false)
@@ -183,6 +186,18 @@ export default function TeacherSchedules() {
     }
     
     setTimeout(() => setStatusMessage(null), 5000)
+  }
+
+  const fetchLastUpdated = async () => {
+    const { data } = await supabase
+      .from('schedule_audit')
+      .select('last_updated_at, users(full_name)')
+      .eq('level', selectedLevel)
+      .single()
+    
+    if (data) {
+      setLastUpdated(data)
+    }
   }
 
   const getTeacherName = (id) => {
@@ -365,6 +380,12 @@ export default function TeacherSchedules() {
 
         <h2 className="text-2xl font-bold text-gray-900">Teacher Schedule Management</h2>
         <p className="text-sm text-gray-500 mt-1">Click any cell to assign teacher and subject. Periods are vertical, classes are horizontal.</p>
+        
+        {lastUpdated && lastUpdated.last_updated_at && (
+          <p className="text-xs text-gray-400 mt-1">
+            Last updated by <span className="text-gray-600 font-medium">{lastUpdated.users?.full_name || 'Unknown'}</span> on <span className="text-gray-600">{new Date(lastUpdated.last_updated_at).toLocaleString()}</span>
+          </p>
+        )}
         
         {statusMessage && (
           <div className={`mt-4 px-4 py-3 rounded-lg text-sm font-medium ${
