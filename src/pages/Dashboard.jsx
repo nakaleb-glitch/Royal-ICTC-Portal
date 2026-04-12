@@ -9,6 +9,38 @@ import AnnouncementPdfButton from '../components/AnnouncementPdfButton'
 const INCIDENT_TYPES = ['Disruption', 'Respect', 'Bullying', 'Academic Dishonesty', 'Attendance', 'Other']
 const SEVERITY_LEVELS = ['Low', 'Medium', 'High']
 
+const PRIMARY_TIMETABLE = [
+  { period: 1, time: '08:00 - 08:35', label: 'Period 1', type: 'class' },
+  { period: 2, time: '08:35 - 09:10', label: 'Period 2', type: 'class' },
+  { period: null, time: '09:10 - 09:30', label: 'Morning Recess', type: 'break' },
+  { period: 3, time: '09:30 - 10:05', label: 'Period 3', type: 'class' },
+  { period: 4, time: '10:05 - 10:40', label: 'Period 4', type: 'class' },
+  { period: 5, time: '10:40 - 11:15', label: 'Period 5', type: 'class' },
+  { period: null, time: '11:30 - 13:00', label: 'Lunch Break / Nap Time', type: 'break' },
+  { period: 6, time: '13:30 - 14:05', label: 'Period 6', type: 'class' },
+  { period: 7, time: '14:05 - 14:40', label: 'Period 7', type: 'class' },
+  { period: null, time: '14:40 - 15:20', label: 'Afternoon Snack', type: 'break' },
+  { period: 8, time: '15:20 - 15:55', label: 'Period 8', type: 'class' },
+  { period: 9, time: '15:55 - 16:30', label: 'Period 9', type: 'class' },
+]
+
+const SECONDARY_TIMETABLE = [
+  { period: 1, time: '08:00 - 08:40', label: 'Period 1', type: 'class' },
+  { period: 2, time: '08:45 - 09:25', label: 'Period 2', type: 'class' },
+  { period: 3, time: '09:30 - 10:10', label: 'Period 3', type: 'class' },
+  { period: null, time: '10:10 - 10:25', label: 'Morning Recess', type: 'break' },
+  { period: 4, time: '10:25 - 11:05', label: 'Period 4', type: 'class' },
+  { period: 5, time: '11:10 - 11:50', label: 'Period 5', type: 'class' },
+  { period: null, time: '12:00 - 13:20', label: 'Lunch Break', type: 'break' },
+  { period: 6, time: '13:30 - 14:10', label: 'Period 6', type: 'class' },
+  { period: 7, time: '14:15 - 14:55', label: 'Period 7', type: 'class' },
+  { period: null, time: '14:55 - 15:20', label: 'Afternoon Snack', type: 'break' },
+  { period: 8, time: '15:20 - 16:00', label: 'Period 8', type: 'class' },
+  { period: 9, time: '16:05 - 16:45', label: 'Period 9', type: 'class' },
+]
+
+const DAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']
+
 // School official week calendar
 const PARTICIPATION_WEEK_SCHEDULE = {
   midterm_1: [
@@ -129,7 +161,10 @@ export default function Dashboard() {
   const [levelFilter, setLevelFilter] = useState('')
   const [gradeFilter, setGradeFilter] = useState('all')
   const [debugWeekOverride, setDebugWeekOverride] = useState(getCurrentWeekIndex())
+  const [debugDayOverride, setDebugDayOverride] = useState(new Date().getDay() === 0 || new Date().getDay() === 6 ? 0 : new Date().getDay() - 1)
   const [showDebugControls, setShowDebugControls] = useState(false)
+  const [teacherSchedule, setTeacherSchedule] = useState({})
+  const [teacherLevel, setTeacherLevel] = useState('primary')
 
   useEffect(() => {
     if (profile) fetchDashboardData()
@@ -440,6 +475,24 @@ export default function Dashboard() {
     setTeacherSubmittedReports(submittedReports || [])
     setTeacherEvents(rows.filter(item => item.item_type === 'event'))
     setTeacherDeadlines(rows.filter(item => item.item_type === 'deadline'))
+
+    // Fetch teacher schedule
+    const { data: scheduleData } = await supabase
+      .from('teacher_schedules')
+      .select('*')
+      .eq('teacher_id', profile.id)
+    
+    if (scheduleData) {
+      const mapped = {}
+      scheduleData.forEach(s => {
+        mapped[`${s.day}-${s.period}`] = s
+      })
+      setTeacherSchedule(mapped)
+    }
+
+    // Set teacher level
+    setTeacherLevel(profile.level || 'primary')
+
     setLoading(false)
   }
 
@@ -985,50 +1038,71 @@ export default function Dashboard() {
 
                 {showDebugControls && (
                   <div className="mt-4 pt-4 border-t border-gray-100">
-                    <div className="flex items-center gap-4">
-                      <div className="flex-1">
-                        <label className="text-xs font-medium text-gray-500 block mb-1">
-                          System Week Override
-                          {sessionStorage.getItem('debug_week_override') !== null && (
-                            <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">
-                              ACTIVE
-                            </span>
-                          )}
-                        </label>
-                        <div className="flex gap-2">
-                          <select
-                            value={debugWeekOverride}
-                            onChange={e => setDebugWeekOverride(Number(e.target.value))}
-                            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          >
-                            {ALL_WEEKS.map((weekItem, idx) => (
-                              <option key={weekItem.week} value={idx}>
-                                {weekItem.label} — {weekItem.range}
-                              </option>
-                            ))}
-                          </select>
-                          <button
-                            onClick={() => {
-                              sessionStorage.setItem('debug_week_override', String(debugWeekOverride))
-                              fetchDashboardData()
-                            }}
-                            className="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700"
-                          >
-                            Apply
-                          </button>
-                          <button
-                            onClick={() => {
-                              sessionStorage.removeItem('debug_week_override')
-                              setDebugWeekOverride(getCurrentWeekIndex())
-                              fetchDashboardData()
-                            }}
-                            className="px-3 py-2 rounded-lg bg-gray-200 text-gray-700 text-sm hover:bg-gray-300"
-                          >
-                            Reset
-                          </button>
-                        </div>
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1">
+                      <label className="text-xs font-medium text-gray-500 block mb-1">
+                        System Week Override
+                        {sessionStorage.getItem('debug_week_override') !== null && (
+                          <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">
+                            ACTIVE
+                          </span>
+                        )}
+                      </label>
+                      <div className="flex gap-2">
+                        <select
+                          value={debugWeekOverride}
+                          onChange={e => setDebugWeekOverride(Number(e.target.value))}
+                          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          {ALL_WEEKS.map((weekItem, idx) => (
+                            <option key={weekItem.week} value={idx}>
+                              {weekItem.label} — {weekItem.range}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => {
+                            sessionStorage.setItem('debug_week_override', String(debugWeekOverride))
+                            fetchDashboardData()
+                          }}
+                          className="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700"
+                        >
+                          Apply
+                        </button>
+                        <button
+                          onClick={() => {
+                            sessionStorage.removeItem('debug_week_override')
+                            setDebugWeekOverride(getCurrentWeekIndex())
+                            fetchDashboardData()
+                          }}
+                          className="px-3 py-2 rounded-lg bg-gray-200 text-gray-700 text-sm hover:bg-gray-300"
+                        >
+                          Reset
+                        </button>
                       </div>
                     </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 mt-4">
+                    <div className="flex-1">
+                      <label className="text-xs font-medium text-gray-500 block mb-1">
+                        Day of Week Override
+                      </label>
+                      <div className="flex gap-2">
+                        <select
+                          value={debugDayOverride}
+                          onChange={e => setDebugDayOverride(Number(e.target.value))}
+                          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          {DAYS.map((dayName, idx) => (
+                            <option key={idx} value={idx}>
+                              {dayName}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
                     <p className="text-[10px] text-gray-400 mt-2">
                       Select a week to override the entire system. All pages and features will react as if it is this week.
                     </p>
@@ -1171,17 +1245,49 @@ export default function Dashboard() {
               {/* LEFT COLUMN - 2 rows */}
               <div className="space-y-6">
                 {/* My Schedule Card */}
-                <Link
-                  to="/teacher-schedule"
-                  className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-sm transition-all block"
+                <div 
+                  className="bg-white rounded-xl border border-gray-200 p-5"
                   style={{ borderTopColor: '#16a34a', borderTopWidth: 3 }}
                 >
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">My Schedule</h3>
-                  <p className="text-xs text-gray-500 mb-4">View your weekly teaching schedule</p>
-                  <div className="w-full rounded-lg text-white px-4 py-2 text-sm font-medium text-center" style={{ backgroundColor: '#16a34a' }}>
-                    View my schedule
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">My Schedule</h3>
+                      <p className="text-xs text-gray-500">{DAYS[debugDayOverride]}</p>
+                    </div>
+                    <Link
+                      to="/teacher-schedule"
+                      className="text-xs px-3 py-1.5 rounded-lg text-white hover:opacity-90 transition-opacity"
+                      style={{ backgroundColor: '#16a34a' }}
+                    >
+                      View full schedule
+                    </Link>
                   </div>
-                </Link>
+
+                  <div className="space-y-1">
+                    {
+                      (teacherLevel === 'secondary' ? SECONDARY_TIMETABLE : PRIMARY_TIMETABLE)
+                        .filter(row => row.type !== 'break')
+                        .map((row, idx) => {
+                          const schedule = teacherSchedule[`${debugDayOverride}-${row.period}`]
+                          return (
+                            <div key={idx} className="flex items-center gap-3 py-1.5 border-b border-gray-100 last:border-0">
+                              <div className="w-[110px] text-xs text-gray-500 shrink-0">{row.time}</div>
+                              <div className="flex-1 min-w-0">
+                                {schedule ? (
+                                  <div className="text-sm font-medium text-gray-900 truncate">{schedule.subject}</div>
+                                ) : (
+                                  <div className="text-sm text-gray-400 italic">Free Period</div>
+                                )}
+                                {schedule && (
+                                  <div className="text-xs text-gray-500 truncate">{schedule.class_name}</div>
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })
+                    }
+                  </div>
+                </div>
                 
                 {/* My Classes */}
                 <div className="bg-white rounded-xl border border-gray-200 p-5" style={{ borderTopColor: CARD_ACCENT.class, borderTopWidth: 3 }}>
