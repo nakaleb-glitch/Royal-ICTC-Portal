@@ -365,7 +365,7 @@ export default function TeacherSchedules() {
               </button>
             </div>
 
-            <div className="mt-1" style={{ marginLeft: '47px' }}>
+            <div className="mt-1 self-end" style={{ marginRight: '18px' }}>
               <a
                 href="#"
                 onClick={e => { e.preventDefault(); exportTemplate(); }}
