@@ -125,11 +125,18 @@ export default function TeacherSchedules() {
     setSchedules(newSchedules)
 
     // Save to database
-    await supabase
+    const { error } = await supabase
       .from('teacher_schedules')
       .upsert(scheduleData, {
         onConflict: 'level, class_name, day, period'
       })
+
+    if (error) {
+      console.error('Save error:', error)
+      alert('Save failed: ' + error.message)
+      // Rollback local state on database error
+      fetchSchedules()
+    }
 
     setSaving(false)
     setEditingCell(null)
