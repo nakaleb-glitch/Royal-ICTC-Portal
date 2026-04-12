@@ -7,13 +7,13 @@ import { useAuth } from '../../contexts/AuthContext'
 const TIMETABLE = [
   { period: 1, primary: '08:10 - 08:45', secondary: '08:00 - 08:40', label: 'Period 1' },
   { period: 2, primary: '08:45 - 09:20', secondary: '08:45 - 09:25', label: 'Period 2' },
-  { period: 3, primary: '09:45 - 10:20', secondary: '10:25 - 11:05', label: 'Period 3' },
-  { period: 4, primary: '10:20 - 10:55', secondary: '11:10 - 11:50', label: 'Period 4' },
-  { period: 5, primary: '10:55 - 11:30', secondary: '12:00 - 13:20', label: 'Period 5' },
-  { period: 6, primary: '13:35 - 14:10', secondary: '14:15 - 14:55', label: 'Period 6' },
-  { period: 7, primary: '14:10 - 14:45', secondary: '14:55 - 15:20', label: 'Period 7' },
-  { period: 8, primary: '15:20 - 15:55', secondary: '16:05 - 16:45', label: 'Period 8' },
-  { period: 9, primary: '15:55 - 16:30', secondary: '16:45 - 17:00', label: 'Period 9' },
+  { period: 3, primary: '09:45 - 10:20', secondary: '09:30 - 10:10', label: 'Period 3' },
+  { period: 4, primary: '10:20 - 10:55', secondary: '10:25 - 11:05', label: 'Period 4' },
+  { period: 5, primary: '10:55 - 11:30', secondary: '11:10 - 11:50', label: 'Period 5' },
+  { period: 6, primary: '13:35 - 14:10', secondary: '13:30 - 14:10', label: 'Period 6' },
+  { period: 7, primary: '14:10 - 14:45', secondary: '14:15 - 14:55', label: 'Period 7' },
+  { period: 8, primary: '15:20 - 15:55', secondary: '15:20 - 16:00', label: 'Period 8' },
+  { period: 9, primary: '15:55 - 16:30', secondary: '16:05 - 16:45', label: 'Period 9' },
 ]
 
 const DAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']
