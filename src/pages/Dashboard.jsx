@@ -1240,13 +1240,12 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
 
-              {/* LEFT COLUMN - 2 rows */}
-              <div className="space-y-6">
-                {/* My Schedule Card */}
+              {/* COLUMN 1 - My Schedule (full height - 25% width) */}
+              <div className="lg:col-span-1">
                 <div 
-                  className="bg-white rounded-xl border border-gray-200 p-5"
+                  className="bg-white rounded-xl border border-gray-200 p-5 h-full"
                   style={{ borderTopColor: '#16a34a', borderTopWidth: 3 }}
                 >
                   <div className="flex items-center justify-between mb-4">
@@ -1259,7 +1258,7 @@ export default function Dashboard() {
                       className="text-xs px-3 py-1.5 rounded-lg text-white hover:opacity-90 transition-opacity"
                       style={{ backgroundColor: '#16a34a' }}
                     >
-                      View full schedule
+                      Full
                     </Link>
                   </div>
 
@@ -1270,16 +1269,16 @@ export default function Dashboard() {
                         .map((row, idx) => {
                           const schedule = teacherSchedule[`${debugDayOverride}-${row.period}`]
                           return (
-                            <div key={idx} className="flex items-center gap-3 py-1.5 border-b border-gray-100 last:border-0">
-                              <div className="w-[110px] text-xs text-gray-500 shrink-0">{row.time}</div>
+                            <div key={idx} className="flex items-center gap-2 py-1 border-b border-gray-100 last:border-0">
+                              <div className="w-[75px] text-[10px] text-gray-500 shrink-0">{row.time.split(' - ')[0]}</div>
                               <div className="flex-1 min-w-0">
                                 {schedule ? (
                                   <div className="text-sm font-medium text-gray-900 truncate">{schedule.subject}</div>
                                 ) : (
-                                  <div className="text-sm text-gray-400 italic">Free Period</div>
+                                  <div className="text-xs text-gray-400 italic">Free</div>
                                 )}
                                 {schedule && (
-                                  <div className="text-xs text-gray-500 truncate">{schedule.class_name}</div>
+                                  <div className="text-[10px] text-gray-500 truncate">{schedule.class_name}</div>
                                 )}
                               </div>
                             </div>
@@ -1288,9 +1287,11 @@ export default function Dashboard() {
                     }
                   </div>
                 </div>
-                
-                {/* My Classes */}
-                <div className="bg-white rounded-xl border border-gray-200 p-5" style={{ borderTopColor: CARD_ACCENT.class, borderTopWidth: 3 }}>
+              </div>
+
+              {/* COLUMN 2 - My Classes (full height - 25% width) */}
+              <div className="lg:col-span-1">
+                <div className="bg-white rounded-xl border border-gray-200 p-5 h-full" style={{ borderTopColor: CARD_ACCENT.class, borderTopWidth: 3 }}>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">My Classes</h3>
                   <div className="space-y-3">
                     {classes.length === 0 ? (
@@ -1302,14 +1303,14 @@ export default function Dashboard() {
                         <Link
                           key={cls.id}
                           to={`/class/${cls.id}`}
-                          className="block bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm transition-all"
+                          className="block bg-white rounded-lg border border-gray-200 p-3 hover:shadow-sm transition-all"
                           style={{ borderTopColor: '#9ca3af', borderTopWidth: 2 }}
                         >
-                          <div className="font-semibold text-gray-900">{cls.name}</div>
-                          <div className="text-sm text-gray-500 mt-1">
+                          <div className="font-semibold text-gray-900 text-sm">{cls.name}</div>
+                          <div className="text-xs text-gray-500 mt-1">
                             {levelLabel(cls.level)} - {programmeLabel(cls.programme)}
                           </div>
-                          <div className="text-xs text-gray-400 mt-2">
+                          <div className="text-[10px] text-gray-400 mt-1">
                             {cls.student_count || 0} students
                           </div>
                         </Link>
@@ -1319,8 +1320,8 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* RIGHT COLUMN - 4 rows stacked vertically */}
-              <div className="space-y-6">
+              {/* COLUMN 3+4 - All other widgets stacked (50% width) */}
+              <div className="lg:col-span-2 space-y-6">
 
                 {/* 1. Admin Deadlines */}
                 <div className="bg-white rounded-xl border border-gray-200 p-5" style={{ borderTopColor: CARD_ACCENT.deadlines, borderTopWidth: 3 }}>
