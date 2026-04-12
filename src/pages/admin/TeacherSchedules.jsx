@@ -36,6 +36,8 @@ export default function TeacherSchedules() {
   const [saving, setSaving] = useState(false)
   const fileInputRef = useRef(null)
   const [showCsvHelp, setShowCsvHelp] = useState(false)
+  const [statusMessage, setStatusMessage] = useState(null)
+  const [confirmClear, setConfirmClear] = useState(false)
 
   useEffect(() => {
     fetchTeachers()
@@ -332,6 +334,16 @@ export default function TeacherSchedules() {
 
         <h2 className="text-2xl font-bold text-gray-900">Teacher Schedule Management</h2>
         <p className="text-sm text-gray-500 mt-1">Click any cell to assign teacher and subject. Periods are vertical, classes are horizontal.</p>
+        
+        {statusMessage && (
+          <div className={`mt-4 px-4 py-3 rounded-lg text-sm font-medium ${
+            statusMessage.type === 'success' 
+              ? 'bg-green-50 border border-green-200 text-green-800' 
+              : 'bg-red-50 border border-red-200 text-red-800'
+          }`}>
+            {statusMessage.text}
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 mb-4">
