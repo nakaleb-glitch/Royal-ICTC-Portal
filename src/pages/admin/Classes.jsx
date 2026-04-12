@@ -82,10 +82,14 @@ export default function Classes() {
 
   const fetchClasses = async () => {
     setLoading(true)
-    const { data } = await supabase
+    console.log('🔍 [DEBUG] Fetching classes...')
+    const { data, error } = await supabase
       .from('classes')
       .select('*, users(full_name, email)')
       .order('name')
+    
+    console.log('✅ [DEBUG] Classes response:', { data: data?.length, error, data })
+    
     setClasses(data || [])
     setLoading(false)
   }
