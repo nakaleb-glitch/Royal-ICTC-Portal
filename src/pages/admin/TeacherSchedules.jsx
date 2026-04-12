@@ -95,19 +95,19 @@ export default function TeacherSchedules() {
   const getFilteredTeachers = () => {
     if (!editingCell) return teachers
     
-    // Find class teacher for this homeroom
-    const matchingClass = classes.find(c => c.name && c.name.startsWith(editingCell.className))
+    // Find ALL classes for this homeroom
+    const matchingClasses = classes.filter(c => 
+      c.name && c.name.startsWith(editingCell.className + ' ')
+    )
     
-    if (matchingClass && matchingClass.teacher_id) {
-      const assignedTeacher = teachers.find(t => t.id === matchingClass.teacher_id)
-      if (assignedTeacher) {
-        // Put assigned teacher first, then all others
-        const otherTeachers = teachers.filter(t => t.id !== matchingClass.teacher_id)
-        return [assignedTeacher, ...otherTeachers]
-      }
-    }
+    // Collect all unique teachers for these classes
+    const classTeacherIds = new Set()
+    matchingClasses.forEach(c => {
+      if (c.teacher_id) classTeacherIds.add(c.teacher_id)
+    })
     
-    return teachers
+    // Return ONLY the teachers assigned to this homeroom's classes
+    return teachers.filter(t => classTeacherIds.has(t.id))
   }
 
   const saveSchedule = async () => {
