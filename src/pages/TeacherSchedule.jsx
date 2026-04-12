@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import Layout from '../../components/Layout'
+import Layout from '../components/Layout'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../../lib/supabase'
-import { useAuth } from '../../contexts/AuthContext'
+import { supabase } from '../lib/supabase'
+import { useAuth } from '../contexts/AuthContext'
 
 const PRIMARY_TIMETABLE = [
   { period: 1, time: '08:00 - 08:35', label: 'Period 1', type: 'class' },
