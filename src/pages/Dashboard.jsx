@@ -1172,7 +1172,7 @@ export default function Dashboard() {
               <div className="space-y-6">
                 {/* My Schedule Card */}
                 <Link
-                  to="/admin/teacher-schedule-view"
+                  to="/teacher-schedule"
                   className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-sm transition-all block"
                   style={{ borderTopColor: '#16a34a', borderTopWidth: 3 }}
                 >
