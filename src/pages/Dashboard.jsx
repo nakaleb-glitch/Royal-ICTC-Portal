@@ -1088,8 +1088,16 @@ export default function Dashboard() {
                         </select>
                         <button
                           onClick={() => {
+                            // Clear all storage overrides
                             sessionStorage.removeItem('debug_week_override')
+                            sessionStorage.removeItem('debug_day_override')
+                            sessionStorage.removeItem('debug_date_override')
+
+                            // Reset all state variables to current defaults
                             setDebugWeekOverride(getCurrentWeekIndex())
+                            setDebugDayOverride(new Date().getDay() === 0 ? 6 : new Date().getDay() - 1)
+                            setDebugDateOverride(new Date().toISOString().slice(0, 10))
+                            
                             fetchDashboardData()
                           }}
                           className="px-3 py-2 rounded-lg bg-gray-200 text-gray-700 text-sm hover:bg-gray-300"
