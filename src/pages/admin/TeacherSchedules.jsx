@@ -58,14 +58,8 @@ export default function TeacherSchedules() {
       .eq('level', selectedLevel)
       .order('name')
     
-    // Get unique homerooms
-    const homerooms = new Set()
-    data?.forEach(c => {
-      const homeroom = c.name.split(' ')[0]
-      homerooms.add(homeroom)
-    })
-    
-    setClasses(Array.from(homerooms).sort())
+    // Store all class objects, not just homeroom names
+    setClasses(data || [])
   }
 
   const fetchSchedules = async () => {
@@ -288,9 +282,9 @@ export default function TeacherSchedules() {
               <thead>
                 <tr className="border-b border-gray-200 bg-gray-50">
                   <th className="px-3 py-2 text-left font-medium text-gray-600 w-[150px]">Period</th>
-                  {classes.map(cls => (
-                    <th key={cls} className="px-3 py-2 text-center font-medium text-gray-600">
-                      {cls}
+                  {Array.from(new Set(classes.map(c => c.name.split(' ')[0]))).sort().map(homeroom => (
+                    <th key={homeroom} className="px-3 py-2 text-center font-medium text-gray-600">
+                      {homeroom}
                     </th>
                   ))}
                 </tr>
@@ -304,7 +298,7 @@ export default function TeacherSchedules() {
                         <div className="text-xs text-gray-500">{selectedLevel === 'primary' ? row.primary : row.secondary}</div>
                       </td>
 
-                      {classes.map(cls => {
+                      {Array.from(new Set(classes.map(c => c.name.split(' ')[0]))).sort().map(cls => {
                         const schedule = schedules[`${cls}-${dayIdx}-${row.period}`]
                         return (
                           <td
