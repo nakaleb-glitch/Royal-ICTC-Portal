@@ -160,9 +160,29 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [levelFilter, setLevelFilter] = useState('')
   const [gradeFilter, setGradeFilter] = useState('all')
-  const [debugWeekOverride, setDebugWeekOverride] = useState(getCurrentWeekIndex())
-  const [debugDayOverride, setDebugDayOverride] = useState(new Date().getDay() === 0 ? 6 : new Date().getDay() - 1)
-  const [debugDateOverride, setDebugDateOverride] = useState(new Date().toISOString().slice(0, 10))
+  const [debugWeekOverride, setDebugWeekOverride] = useState(() => {
+    const stored = sessionStorage.getItem('debug_week_override')
+    if (stored !== null) {
+      const idx = Number(stored)
+      if (idx >= 0 && idx < ALL_WEEKS.length) return idx
+    }
+    return getCurrentWeekIndex()
+  })
+  
+  const [debugDayOverride, setDebugDayOverride] = useState(() => {
+    const stored = sessionStorage.getItem('debug_day_override')
+    if (stored !== null) {
+      const idx = Number(stored)
+      if (idx >= 0 && idx < 7) return idx
+    }
+    return new Date().getDay() === 0 ? 6 : new Date().getDay() - 1
+  })
+  
+  const [debugDateOverride, setDebugDateOverride] = useState(() => {
+    const stored = sessionStorage.getItem('debug_date_override')
+    if (stored) return stored
+    return new Date().toISOString().slice(0, 10)
+  })
   const [showDebugControls, setShowDebugControls] = useState(false)
   const [teacherSchedule, setTeacherSchedule] = useState({})
   const [teacherLevel, setTeacherLevel] = useState('primary')
@@ -1096,10 +1116,12 @@ export default function Dashboard() {
                           onChange={e => {
                             const selectedDate = new Date(e.target.value)
                             setDebugDateOverride(e.target.value)
+                            sessionStorage.setItem('debug_date_override', e.target.value)
                             
                             // Auto calculate day of week (0=Sunday -> 6=Saturday)
                             const dayIdx = selectedDate.getDay() === 0 ? 6 : selectedDate.getDay() - 1
                             setDebugDayOverride(dayIdx)
+                            sessionStorage.setItem('debug_day_override', String(dayIdx))
 
                             // Auto calculate week number for this date
                             const firstDay = new Date('2026-08-17')
@@ -1108,6 +1130,7 @@ export default function Dashboard() {
                             const weekIndex = Math.max(0, Math.floor(diffDays / 7))
                             if (weekIndex >= 0 && weekIndex < ALL_WEEKS.length) {
                               setDebugWeekOverride(weekIndex)
+                              sessionStorage.setItem('debug_week_override', String(weekIndex))
                             }
                           }}
                           className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
