@@ -86,20 +86,26 @@ export default function TeacherSchedule() {
     }
   }
 
-  // Fixed subject colors
-  const getClassColor = (className, subject) => {
-    switch(subject) {
-      case 'ESL':
-        return 'bg-green-50 border-green-200 text-green-800'
-      case 'Mathematics':
-        return 'bg-amber-50 border-amber-200 text-amber-800'
-      case 'Science':
-        return 'bg-blue-50 border-blue-200 text-blue-800'
-      case 'Global Perspectives':
-        return 'bg-purple-50 border-purple-200 text-purple-800'
-      default:
-        return 'bg-gray-50 border-gray-200 text-gray-800'
+  // Color by Class name for individual teacher view
+  const getClassColor = (className) => {
+    const colors = [
+      'bg-blue-50 border-blue-200 text-blue-800',
+      'bg-green-50 border-green-200 text-green-800',
+      'bg-purple-50 border-purple-200 text-purple-800',
+      'bg-amber-50 border-amber-200 text-amber-800',
+      'bg-rose-50 border-rose-200 text-rose-800',
+      'bg-teal-50 border-teal-200 text-teal-800',
+      'bg-indigo-50 border-indigo-200 text-indigo-800',
+      'bg-pink-50 border-pink-200 text-pink-800',
+    ]
+    
+    let hash = 0
+    for (let i = 0; i < className.length; i++) {
+      hash = ((hash << 5) - hash) + className.charCodeAt(i)
+      hash = hash & hash
     }
+    
+    return colors[Math.abs(hash) % colors.length]
   }
 
   const getTimetable = () => {
@@ -238,7 +244,7 @@ export default function TeacherSchedule() {
                         >
                           <div className="w-full min-h-[60px] p-2 rounded">
                              {schedule ? (
-                               <div className={`rounded p-2 border ${getClassColor(schedule.class_name, schedule.subject)}`}>
+                               <div className={`rounded p-2 border ${getClassColor(schedule.class_name)}`}>
                                  <div className="font-medium">{schedule.subject}</div>
                                  <div className="text-xs opacity-90">{schedule.class_name}</div>
                                </div>

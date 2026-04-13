@@ -456,10 +456,16 @@ export default function TeacherSchedules() {
                           >
                             <button
                               onClick={() => openEditModal(cls, dayIdx, row.period)}
-                              className="w-full min-h-[50px] p-1 rounded border border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50 transition-colors text-xs text-left"
+                              className="w-full min-h-[50px] p-1 rounded transition-colors text-xs text-left"
                             >
                               {schedule ? (
-                                <div>
+                                <div className={`rounded p-1 border ${
+                                  schedule.subject === 'ESL' ? 'bg-green-50 border-green-200' :
+                                  schedule.subject === 'Mathematics' ? 'bg-amber-50 border-amber-200' :
+                                  schedule.subject === 'Science' ? 'bg-blue-50 border-blue-200' :
+                                  schedule.subject === 'Global Perspectives' ? 'bg-purple-50 border-purple-200' :
+                                  'bg-gray-50 border-gray-200'
+                                }`}>
                                   <div className="font-medium text-gray-800 truncate">{getTeacherName(schedule.teacher_id)}</div>
                                   <div className="text-gray-600 truncate">{schedule.subject}</div>
                                 </div>
