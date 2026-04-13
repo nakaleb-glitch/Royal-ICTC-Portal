@@ -499,20 +499,6 @@ export default function TeacherSchedules() {
             </div>
 
             <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Teacher</label>
-                <select
-                  value={editForm.teacher_id}
-                  onChange={(e) => setEditForm({ ...editForm, teacher_id: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
-                >
-                  <option value="">Select teacher</option>
-                  {getFilteredTeachers().map(t => (
-                    <option key={t.id} value={t.id}>{t.full_name}</option>
-                  ))}
-                </select>
-              </div>
-
                <div>
                  <label className="block text-xs font-medium text-gray-500 mb-1">Subject</label>
                  <select
@@ -520,23 +506,25 @@ export default function TeacherSchedules() {
                    onChange={(e) => {
                      const selectedSubject = e.target.value
                      let autoTeacherId = ''
+                     let autoTeacherName = ''
 
                      if (selectedSubject && editingCell) {
-                       // Find all classes for this homeroom
-                       const matchingClasses = classes.filter(c =>
+                       // Find the one matching class for this homeroom + subject
+                       const matchingClass = classes.find(c =>
                          c.name && c.name.startsWith(editingCell.className + ' ') && c.subject === selectedSubject
                        )
 
-                       // If we have exactly one matching class, auto-select that teacher
-                       if (matchingClasses.length === 1 && matchingClasses[0].teacher_id) {
-                         autoTeacherId = matchingClasses[0].teacher_id
+                       if (matchingClass && matchingClass.teacher_id) {
+                         autoTeacherId = matchingClass.teacher_id
+                         autoTeacherName = getTeacherName(matchingClass.teacher_id)
                        }
                      }
 
                      setEditForm({
                        ...editForm,
                        subject: selectedSubject,
-                       teacher_id: autoTeacherId
+                       teacher_id: autoTeacherId,
+                       teacher_name: autoTeacherName
                      })
                    }}
                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
@@ -547,6 +535,15 @@ export default function TeacherSchedules() {
                    ))}
                  </select>
                </div>
+
+              {editForm.teacher_id && editForm.teacher_name && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Teacher</label>
+                  <div className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium border border-blue-200">
+                    {editForm.teacher_name}
+                  </div>
+                </div>
+              )}
 
               <div className="flex gap-3 pt-2">
                 <button
