@@ -112,6 +112,22 @@ export default function TeacherSchedule() {
     return teacherLevel === 'secondary' ? SECONDARY_TIMETABLE : PRIMARY_TIMETABLE
   }
 
+  const calculateTotalPeriods = () => {
+    let count = 0
+    const timetable = getTimetable()
+    
+    timetable.forEach(row => {
+      if (row.type === 'break' || row.period === null) return
+      
+      DAYS.forEach((_, dayIdx) => {
+        const schedule = schedules[`${dayIdx}-${row.period}`]
+        if (schedule) count++
+      })
+    })
+    
+    return count
+  }
+
   return (
     <Layout>
       <div className="mb-8">
@@ -164,12 +180,17 @@ export default function TeacherSchedule() {
               </div>
 
               {selectedTeacher && teacherLevel && (
-                <div className={`px-4 py-2 rounded-full font-semibold text-sm text-white ${
-                  teacherLevel === 'primary' 
-                    ? 'bg-green-600' 
-                    : 'bg-blue-600'
-                }`}>
-                  {teacherLevel.charAt(0).toUpperCase() + teacherLevel.slice(1)}
+                <div className="flex flex-col items-center gap-2">
+                  <div className={`px-4 py-2 rounded-full font-semibold text-sm text-white ${
+                    teacherLevel === 'primary' 
+                      ? 'bg-green-600' 
+                      : 'bg-blue-600'
+                  }`}>
+                    {teacherLevel.charAt(0).toUpperCase() + teacherLevel.slice(1)}
+                  </div>
+                  <div className="text-sm font-medium text-gray-600">
+                    Total Periods: {calculateTotalPeriods()}
+                  </div>
                 </div>
               )}
             </div>
