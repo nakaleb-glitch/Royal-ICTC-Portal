@@ -430,9 +430,9 @@ export default function TeacherSchedules() {
             <table className="w-full text-sm table-fixed">
               <thead>
                 <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="px-3 py-2 text-left font-medium text-gray-600 w-[150px]">Period</th>
+                  <th className="px-3 py-2 text-left font-medium text-gray-600 w-[120px] min-w-[120px]">Period</th>
                   {Array.from(new Set(classes.map(c => c.name.split(' ')[0]))).sort().map(homeroom => (
-                    <th key={homeroom} className="px-3 py-2 text-center font-medium text-gray-600">
+                    <th key={homeroom} className="px-3 py-2 text-center font-medium text-gray-600 w-[112px] min-w-[112px]">
                       {homeroom}
                     </th>
                   ))}
