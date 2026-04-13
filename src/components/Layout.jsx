@@ -340,8 +340,8 @@ export default function Layout({ children }) {
                 </>
               ) : (
                 <div className="flex items-center">
-                  <span className="text-xs font-semibold text-amber-400 px-3 py-1">
-                    Admin override in progress. System set to SY26-27 and {ALL_WEEKS[getCurrentWeekIndex()]?.label || 'Week 0'}.
+                  <span className="text-xs font-semibold italic text-amber-400 px-3 py-1">
+                    Admin date override in progress.
                   </span>
                 </div>
               )}
