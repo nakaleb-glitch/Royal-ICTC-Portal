@@ -182,9 +182,14 @@ export default function Layout({ children }) {
   }, [profile?.id, profile?.role, profile?.student_id_ref, profile?.staff_id, profile?.full_name, user?.email])
 
   const requiresPasswordChange = !!profile?.must_change_password
-  const displayRole = String(profile?.role || '')
-    .toLowerCase()
-    .replace(/\b\w/g, (char) => char.toUpperCase())
+  const displayRole = (() => {
+    if (profile?.role === 'admin_teacher') {
+      return activeMode === 'admin' ? 'Admin' : 'Teacher'
+    }
+    return String(profile?.role || '')
+      .toLowerCase()
+      .replace(/\b\w/g, (char) => char.toUpperCase())
+  })()
   const idLabel = profile?.role === 'student' ? 'Student ID' : 'Staff ID'
   const avatarUrl = user?.user_metadata?.avatar_url || null
   const avatarFallback = String(navNameEng || profile?.full_name || user?.email || 'U').trim().charAt(0).toUpperCase()
@@ -375,7 +380,7 @@ export default function Layout({ children }) {
               <div className="flex flex-col items-center gap-1">
                 <span className="text-xs px-2 py-1 rounded-full font-medium"
                   style={{
-                    background: profile?.role === 'admin' || profile?.role === 'admin_teacher' ? '#d1232a' : '#1f86c7',
+                    background: (profile?.role === 'admin' || (profile?.role === 'admin_teacher' && activeMode === 'admin')) ? '#d1232a' : '#1f86c7',
                     color: '#fff'
                   }}>
                   {displayRole || 'User'}
