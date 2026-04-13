@@ -430,7 +430,7 @@ export default function TeacherSchedules() {
             <table className="w-full text-sm table-fixed">
               <thead>
                 <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="px-3 py-2 text-left font-medium text-gray-600 w-[120px] min-w-[120px]">Period</th>
+                  <th className="px-3 py-2 text-left font-medium text-gray-600 w-[120px] min-w-[120px] sticky left-0 bg-gray-50 z-10">Period</th>
                   {Array.from(new Set(classes.map(c => c.name.split(' ')[0]))).sort().map(homeroom => (
                     <th key={homeroom} className="px-3 py-2 text-center font-medium text-gray-600 w-[112px] min-w-[112px]">
                       {homeroom}
@@ -442,7 +442,7 @@ export default function TeacherSchedules() {
                 {TIMETABLE.map((row, pidx) => {
                   return (
                     <tr key={pidx} className="border-b border-gray-100">
-                      <td className="px-3 py-2 border-r border-gray-100 bg-gray-50">
+                      <td className="px-3 py-2 border-r border-gray-100 bg-gray-50 sticky left-0 z-10">
                         <div className="font-medium">{row.label}</div>
                         <div className="text-xs text-gray-500">{selectedLevel === 'primary' ? row.primary : row.secondary}</div>
                       </td>
