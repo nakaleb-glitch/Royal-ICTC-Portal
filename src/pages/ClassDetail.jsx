@@ -101,6 +101,7 @@ export default function ClassDetail() {
   const [showAnnouncementForm, setShowAnnouncementForm] = useState(false)
   const [showSentAnnouncements, setShowSentAnnouncements] = useState(false)
   const [activeWeek, setActiveWeek] = useState(0)
+  const [activeTab, setActiveTab] = useState('students')
 
   // Listen for changes to current week from navigation bar
   useEffect(() => {
@@ -364,6 +365,50 @@ export default function ClassDetail() {
         <p className="text-gray-500 text-sm mt-1">
           {cls.level === 'primary' ? 'Primary' : 'Secondary'} · {cls.programme === 'bilingual' ? 'Bilingual' : 'Integrated'} · 2026-2027
         </p>
+       </div>
+
+      {/* Page Tabs */}
+      <div className="flex gap-1 border-b border-gray-200 mb-6">
+        <button
+          onClick={() => setActiveTab('students')}
+          className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
+            activeTab === 'students'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Student List
+        </button>
+        <button
+          onClick={() => setActiveTab('gradebooks')}
+          className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
+            activeTab === 'gradebooks'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Gradebooks
+        </button>
+        <button
+          onClick={() => setActiveTab('resources')}
+          className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
+            activeTab === 'resources'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Teacher Resources
+        </button>
+        <button
+          onClick={() => setActiveTab('uploads')}
+          className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
+            activeTab === 'uploads'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Weekly Uploads
+        </button>
       </div>
 
       {!selectedTerm ? (
