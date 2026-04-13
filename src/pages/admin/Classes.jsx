@@ -394,10 +394,15 @@ export default function Classes() {
   ).sort((a, b) => a.localeCompare(b))
 
   const teacherOptions = Array.from(
-    new Set(classes.filter(c => c.teacher_id).map(c => ({ 
-      id: c.teacher_id, 
-      name: c.users?.full_name || c.users?.email 
-    })))
+    classes.filter(c => c.teacher_id).reduce((map, c) => {
+      if (!map.has(c.teacher_id)) {
+        map.set(c.teacher_id, {
+          id: c.teacher_id,
+          name: c.users?.full_name || c.users?.email
+        })
+      }
+      return map
+    }, new Map()).values()
   ).sort((a, b) => a.name.localeCompare(b.name))
 
   const filteredClasses = classes.filter(cls => {
