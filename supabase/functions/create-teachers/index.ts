@@ -68,7 +68,7 @@ serve(async (req) => {
       .eq('id', callerData.user.id)
       .single()
 
-    if (callerProfile?.role !== 'admin') {
+    if (callerProfile?.role !== 'admin' && callerProfile?.role !== 'admin_teacher') {
       return new Response(
         JSON.stringify({ error: 'Only admins can import users' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
