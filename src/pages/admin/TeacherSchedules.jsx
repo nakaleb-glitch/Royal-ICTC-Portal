@@ -521,6 +521,7 @@ export default function TeacherSchedules() {
                        }
                      }
 
+                     // Always overwrite teacher with fresh lookup result - every time subject changes
                      setEditForm({
                        ...editForm,
                        subject: selectedSubject,
