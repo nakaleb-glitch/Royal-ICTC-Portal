@@ -538,14 +538,15 @@ export default function Users() {
               onChange={(e) => setCreateTeacherForm(prev => ({ ...prev, email: e.target.value }))}
               className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
             />
-            <select
-              value={createTeacherForm.role}
-              onChange={(e) => setCreateTeacherForm(prev => ({ ...prev, role: e.target.value }))}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
-            >
-              <option value="teacher">Teacher</option>
-              <option value="admin">Admin</option>
-            </select>
+             <select
+               value={createTeacherForm.role}
+               onChange={(e) => setCreateTeacherForm(prev => ({ ...prev, role: e.target.value }))}
+               className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+             >
+               <option value="teacher">Teacher</option>
+               <option value="admin">Admin</option>
+               <option value="admin_teacher">Admin + Teacher</option>
+             </select>
             <select
               value={createTeacherForm.level}
               onChange={(e) => setCreateTeacherForm(prev => ({ ...prev, level: e.target.value }))}
@@ -751,6 +752,7 @@ export default function Users() {
                       >
                         <option value="teacher">Teacher</option>
                         <option value="admin">Admin</option>
+                        <option value="admin_teacher">Admin + Teacher</option>
                       </select>
                     ) : isRowEditing ? (
                       <select
@@ -760,6 +762,7 @@ export default function Users() {
                       >
                         <option value="teacher">Teacher</option>
                         <option value="admin">Admin</option>
+                        <option value="admin_teacher">Admin + Teacher</option>
                       </select>
                     ) : (
                       <span className={`text-xs px-2 py-1 rounded-full font-medium ${

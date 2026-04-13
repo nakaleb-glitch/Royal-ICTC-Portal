@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+  import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate, Link, useLocation } from 'react-router-dom'
@@ -81,7 +81,7 @@ const getCurrentWeekIndex = () => {
 }
 
 export default function Layout({ children }) {
-  const { profile, user, signOut, refreshProfile } = useAuth()
+  const { profile, user, signOut, refreshProfile, activeMode, effectiveRole, toggleRoleMode } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [newPassword, setNewPassword] = useState('')
@@ -253,7 +253,7 @@ export default function Layout({ children }) {
             </div>
             {/* Nav menu */}
             <div className="flex gap-6 items-center">
-              {profile?.role === 'admin' && location.pathname !== '/dashboard' && (
+              {effectiveRole === 'admin' && location.pathname !== '/dashboard' && (
                 <div className="relative">
                   <button
                     type="button"
@@ -348,6 +348,19 @@ export default function Layout({ children }) {
           {/* Right — Cambridge Logo + user info */}
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-4">
+              {profile?.role === 'admin_teacher' && (
+                <button
+                  onClick={toggleRoleMode}
+                  className="px-2 py-1 rounded-md text-[10px] font-semibold transition-colors"
+                  style={{
+                    backgroundColor: activeMode === 'admin' ? '#d1232a' : '#1f86c7',
+                    color: '#ffffff'
+                  }}
+                >
+                  Toggle to {activeMode === 'admin' ? 'Teacher Mode' : 'Admin Mode'}
+                </button>
+              )}
+
               {avatarUrl ? (
                 <img
                   src={avatarUrl}

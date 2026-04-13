@@ -7,6 +7,29 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [activeMode, setActiveMode] = useState(null)
+
+  useEffect(() => {
+    // Load saved active mode from localStorage
+    if (profile?.role === 'admin_teacher') {
+      const saved = localStorage.getItem('active_role_mode')
+      if (saved === 'admin' || saved === 'teacher') {
+        setActiveMode(saved)
+      } else {
+        // Default to admin mode for hybrid users
+        setActiveMode('admin')
+      }
+    } else {
+      setActiveMode(null)
+    }
+  }, [profile?.role])
+
+  const toggleRoleMode = () => {
+    if (profile?.role !== 'admin_teacher') return
+    const newMode = activeMode === 'admin' ? 'teacher' : 'admin'
+    setActiveMode(newMode)
+    localStorage.setItem('active_role_mode', newMode)
+  }
 
   const fetchProfile = async (userId) => {
     const { data } = await supabase
@@ -80,8 +103,27 @@ export const AuthProvider = ({ children }) => {
     await fetchProfile(user.id)
   }
 
+  // Compute effective role for UI checks
+  const effectiveRole = (() => {
+    if (profile?.role === 'admin_teacher') {
+      return activeMode
+    }
+    return profile?.role
+  })()
+
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signInWithGoogle, signInWithStaffId, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      profile, 
+      loading, 
+      signInWithGoogle, 
+      signInWithStaffId, 
+      signOut, 
+      refreshProfile,
+      activeMode,
+      effectiveRole,
+      toggleRoleMode
+    }}>
       {children}
     </AuthContext.Provider>
   )
