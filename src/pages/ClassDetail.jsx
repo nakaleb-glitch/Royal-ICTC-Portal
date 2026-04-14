@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { normalizeLinkUrl, uploadTeacherAnnouncementPdf } from '../lib/announcementAttachments'
@@ -847,6 +847,91 @@ const weightedNormalized = (items) => {
   return present.reduce((sum, item) => sum + item.value * (item.weight / totalWeight), 0)
 }
 
+const scoreColorClass = (score) => {
+  if (score == null) return 'text-gray-300'
+  if (score >= 80) return 'text-green-600'
+  if (score >= 60) return 'text-blue-600'
+  if (score >= 40) return 'text-yellow-600'
+  return 'text-red-600'
+}
+
+const calcParticipationPct = (scoresOutOfTen) => {
+  const valid = (scoresOutOfTen || []).filter((v) => v !== undefined && v !== '' && v !== null).map(Number)
+  const average = avg(valid)
+  return average != null ? average * 10 : null
+}
+
+const calcAssignmentAveragePct = ({ assignments, gradeByAssignmentId }) => {
+  const pcts = (assignments || [])
+    .map((assignment) => {
+      const g = gradeByAssignmentId?.[assignment.id]
+      if (!g || g.is_absent || g.score == null || g.score === '') return null
+      return pct(parseFloat(g.score), assignment.max_points)
+    })
+    .filter((v) => v != null)
+  return avg(pcts)
+}
+
+const calcAttainmentPct = ({ participationPct, assignmentPct }) => weightedNormalized([
+  { value: participationPct, weight: 20 },
+  { value: assignmentPct, weight: 80 },
+])
+
+const calcTotalPct = ({ attainmentPct, progressTestPct }) => weightedNormalized([
+  { value: attainmentPct, weight: 75 },
+  { value: progressTestPct, weight: 25 },
+])
+
+const readDraft = (key, fallback) => {
+  try {
+    const raw = window.localStorage.getItem(key)
+    if (!raw) return fallback
+    return JSON.parse(raw)
+  } catch {
+    return fallback
+  }
+}
+
+const writeDraft = (key, value) => {
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value))
+  } catch {
+    // ignore storage failures in private mode/full quota
+  }
+}
+
+const clearDraft = (key) => {
+  try {
+    window.localStorage.removeItem(key)
+  } catch {
+    // ignore
+  }
+}
+
+const handleGridCellKeyDown = (event) => {
+  if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter'].includes(event.key)) return
+  const scope = event.currentTarget.dataset.gridScope
+  const row = Number(event.currentTarget.dataset.gridRow)
+  const col = Number(event.currentTarget.dataset.gridCol)
+  if (!scope || Number.isNaN(row) || Number.isNaN(col)) return
+
+  const inputs = [...document.querySelectorAll(`input[data-grid-scope="${scope}"]`)]
+  const map = new Map(inputs.map((input) => [`${input.dataset.gridRow}_${input.dataset.gridCol}`, input]))
+  let nextRow = row
+  let nextCol = col
+  if (event.key === 'ArrowUp') nextRow -= 1
+  if (event.key === 'ArrowDown' || event.key === 'Enter') nextRow += 1
+  if (event.key === 'ArrowLeft') nextCol -= 1
+  if (event.key === 'ArrowRight') nextCol += 1
+
+  const nextInput = map.get(`${nextRow}_${nextCol}`)
+  if (nextInput) {
+    event.preventDefault()
+    nextInput.focus()
+    nextInput.select?.()
+  }
+}
+
 // ── Gradebook Shell ───────────────────────────────────────────────────────────
 function Gradebook({ cls, term, termLabel, onBack, onUnsavedChange }) {
   const [activeTab, setActiveTab] = useState('participation')
@@ -987,6 +1072,7 @@ function ParticipationTab({ classId, term, students, onDirtyChange }) {
   const [saved, setSaved] = useState(false)
   const [openCommentKey, setOpenCommentKey] = useState(null)
   const [draftComment, setDraftComment] = useState('')
+  const draftKey = `gradebook:draft:participation:${classId}:${term}`
 
   useEffect(() => { fetchGrades() }, [classId, term])
   useEffect(() => { onDirtyChange?.(false) }, [classId, term])
@@ -999,8 +1085,14 @@ function ParticipationTab({ classId, term, students, onDirtyChange }) {
       .eq('term', term)
     const map = {}
     data?.forEach(g => { map[`${g.student_id}_${g.week}`] = { score: g.score, comment: g.comment } })
-    setGrades(map)
+    const draft = readDraft(draftKey, {})
+    setGrades({ ...map, ...draft })
   }
+
+  useEffect(() => {
+    const timer = setTimeout(() => writeDraft(draftKey, grades), 350)
+    return () => clearTimeout(timer)
+  }, [draftKey, grades])
 
   const setGrade = (studentId, week, field, value) => {
     onDirtyChange?.(true)
@@ -1045,6 +1137,7 @@ function ParticipationTab({ classId, term, students, onDirtyChange }) {
     setSaving(false)
     setSaved(true)
     onDirtyChange?.(false)
+    clearDraft(draftKey)
     setTimeout(() => setSaved(false), 2000)
   }
 
@@ -1052,10 +1145,7 @@ function ParticipationTab({ classId, term, students, onDirtyChange }) {
     const scores = weekSchedule
       .filter(w => !w.isNoScore)
       .map(w => grades[`${studentId}_${w.week}`]?.score)
-      .filter(s => s !== undefined && s !== '' && s !== null)
-      .map(Number)
-    const average = avg(scores)
-    return average != null ? average * 10 : null
+    return calcParticipationPct(scores)
   }
 
   const weekSchedule = PARTICIPATION_WEEK_SCHEDULE[term] || Array.from({ length: 7 }, (_, idx) => ({
@@ -1063,6 +1153,14 @@ function ParticipationTab({ classId, term, students, onDirtyChange }) {
     label: `Week ${idx + 1}`,
     range: 'Date TBD',
   }))
+  const studentRowMap = useMemo(
+    () => Object.fromEntries(students.map((student, index) => [student.id, index])),
+    [students]
+  )
+  const weekColMap = useMemo(
+    () => Object.fromEntries(weekSchedule.map((w, index) => [w.week, index])),
+    [weekSchedule]
+  )
 
   return (
     <div>
@@ -1125,6 +1223,10 @@ function ParticipationTab({ classId, term, students, onDirtyChange }) {
                           <input type="number" min="0" max="10" step="0.5" placeholder="—"
                             value={grades[key]?.score ?? ''}
                             onChange={e => setGrade(student.id, weekItem.week, 'score', e.target.value)}
+                            onKeyDown={handleGridCellKeyDown}
+                            data-grid-scope="participation-scores"
+                            data-grid-row={studentRowMap[student.id]}
+                            data-grid-col={weekColMap[weekItem.week]}
                             className="w-14 text-center border border-gray-200 rounded px-1 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-1 block mx-auto"
                           />
                           {openCommentKey === key ? (
@@ -1207,6 +1309,15 @@ function AssignmentsTab({ classId, term, students, onDirtyChange }) {
   const [draftComment, setDraftComment] = useState('')
   const [deletingAssignmentId, setDeletingAssignmentId] = useState(null)
   const [confirmDeleteAssignment, setConfirmDeleteAssignment] = useState(null)
+  const draftKey = `gradebook:draft:assignments:${classId}:${term}`
+  const studentRowMap = useMemo(
+    () => Object.fromEntries(students.map((student, index) => [student.id, index])),
+    [students]
+  )
+  const assignmentColMap = useMemo(
+    () => Object.fromEntries(assignments.map((assignment, index) => [assignment.id, index])),
+    [assignments]
+  )
 
   useEffect(() => { fetchAssignments() }, [classId, term])
   useEffect(() => { onDirtyChange?.(false) }, [classId, term])
@@ -1224,11 +1335,17 @@ function AssignmentsTab({ classId, term, students, onDirtyChange }) {
         .in('student_id', studentIds)
       const map = {}
       gData?.forEach(g => { map[`${g.assignment_id}_${g.student_id}`] = { score: g.score, is_absent: g.is_absent, comment: g.comment } })
-      setGrades(map)
+      const draft = readDraft(draftKey, {})
+      setGrades({ ...map, ...draft })
     } else {
-      setGrades({})
+      setGrades(readDraft(draftKey, {}))
     }
   }
+
+  useEffect(() => {
+    const timer = setTimeout(() => writeDraft(draftKey, grades), 350)
+    return () => clearTimeout(timer)
+  }, [draftKey, grades])
 
   const createAssignment = async () => {
     if (!newAssignment.name || !newAssignment.max_points) return
@@ -1272,12 +1389,11 @@ function AssignmentsTab({ classId, term, students, onDirtyChange }) {
   }
 
   const getStudentAvg = (studentId) => {
-    const pcts = assignments.map(a => {
-      const g = grades[`${a.id}_${studentId}`]
-      if (!g || g.is_absent || g.score === '' || g.score == null) return null
-      return pct(parseFloat(g.score), a.max_points)
-    }).filter(p => p !== null)
-    return avg(pcts)
+    const gradeByAssignmentId = {}
+    assignments.forEach((a) => {
+      gradeByAssignmentId[a.id] = grades[`${a.id}_${studentId}`]
+    })
+    return calcAssignmentAveragePct({ assignments, gradeByAssignmentId })
   }
 
   const saveAll = async () => {
@@ -1302,6 +1418,7 @@ function AssignmentsTab({ classId, term, students, onDirtyChange }) {
     setSaving(false)
     setSaved(true)
     onDirtyChange?.(false)
+    clearDraft(draftKey)
     setTimeout(() => setSaved(false), 2000)
   }
 
@@ -1469,6 +1586,10 @@ function AssignmentsTab({ classId, term, students, onDirtyChange }) {
                             <input type="number" min="0" max={assignment.max_points} placeholder="—"
                               value={g.score ?? ''}
                               onChange={e => setGrade(assignment.id, student.id, 'score', e.target.value)}
+                              onKeyDown={handleGridCellKeyDown}
+                              data-grid-scope="assignment-scores"
+                              data-grid-row={studentRowMap[student.id]}
+                              data-grid-col={assignmentColMap[assignment.id]}
                               className="w-[80px] text-center border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                             <button onClick={() => setGrade(assignment.id, student.id, 'is_absent', true)} className="text-xs text-gray-400 hover:text-orange-500">A (absent)</button>
                             {openCommentKey === key ? (
@@ -1545,6 +1666,12 @@ function ProgressTestTab({ classId, term, students, isESL, onDirtyChange }) {
   const [saved, setSaved] = useState(false)
   const [openCommentStudentId, setOpenCommentStudentId] = useState(null)
   const [draftComment, setDraftComment] = useState('')
+  const gradesDraftKey = `gradebook:draft:progress:${classId}:${term}:${isESL ? 'esl' : 'single'}:grades`
+  const totalsDraftKey = `gradebook:draft:progress:${classId}:${term}:${isESL ? 'esl' : 'single'}:totals`
+  const studentRowMap = useMemo(
+    () => Object.fromEntries(students.map((student, index) => [student.id, index])),
+    [students]
+  )
 
   useEffect(() => { fetchGrades() }, [classId, term])
   useEffect(() => { onDirtyChange?.(false) }, [classId, term, isESL])
@@ -1566,8 +1693,22 @@ function ProgressTestTab({ classId, term, students, isESL, onDirtyChange }) {
         ? { rw: g.reading_writing_score, l: g.listening_score, s: g.speaking_score, comment: g.test_comment ?? g.comment ?? null }
         : { score: g.score, comment: g.test_comment ?? g.comment ?? null }
     })
-    setGrades(map)
+    setGrades({ ...map, ...readDraft(gradesDraftKey, {}) })
+    const totalsDraft = readDraft(totalsDraftKey, null)
+    if (totalsDraft && typeof totalsDraft === 'object') {
+      setTotals(prev => ({ ...prev, ...totalsDraft }))
+    }
   }
+
+  useEffect(() => {
+    const timer = setTimeout(() => writeDraft(gradesDraftKey, grades), 350)
+    return () => clearTimeout(timer)
+  }, [gradesDraftKey, grades])
+
+  useEffect(() => {
+    const timer = setTimeout(() => writeDraft(totalsDraftKey, totals), 350)
+    return () => clearTimeout(timer)
+  }, [totalsDraftKey, totals])
 
   const setGrade = (studentId, field, value) => {
     onDirtyChange?.(true)
@@ -1657,6 +1798,8 @@ function ProgressTestTab({ classId, term, students, isESL, onDirtyChange }) {
     setSaving(false)
     setSaved(true)
     onDirtyChange?.(false)
+    clearDraft(gradesDraftKey)
+    clearDraft(totalsDraftKey)
     setTimeout(() => setSaved(false), 2000)
   }
 
@@ -1778,6 +1921,10 @@ function ProgressTestTab({ classId, term, students, isESL, onDirtyChange }) {
                         <input type="number" min="0" max={totals.rw_total || undefined} placeholder="—"
                           value={g.rw ?? ''}
                           onChange={e => setGrade(student.id, 'rw', e.target.value)}
+                          onKeyDown={handleGridCellKeyDown}
+                          data-grid-scope="progress-esl-scores"
+                          data-grid-row={studentRowMap[student.id]}
+                          data-grid-col={0}
                           className="w-20 text-center border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                           {openCommentStudentId === student.id ? (
                             <div className="w-full space-y-1">
@@ -1828,6 +1975,10 @@ function ProgressTestTab({ classId, term, students, isESL, onDirtyChange }) {
                           <input type="number" min="0" max={totals.l_total || undefined} placeholder="—"
                             value={g.l ?? ''}
                             onChange={e => setGrade(student.id, 'l', e.target.value)}
+                            onKeyDown={handleGridCellKeyDown}
+                            data-grid-scope="progress-esl-scores"
+                            data-grid-row={studentRowMap[student.id]}
+                            data-grid-col={1}
                             className="w-20 text-center border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                           
                           {openCommentStudentId === student.id ? (
@@ -1879,6 +2030,10 @@ function ProgressTestTab({ classId, term, students, isESL, onDirtyChange }) {
                           <input type="number" min="0" max={totals.s_total || undefined} placeholder="—"
                             value={g.s ?? ''}
                             onChange={e => setGrade(student.id, 's', e.target.value)}
+                            onKeyDown={handleGridCellKeyDown}
+                            data-grid-scope="progress-esl-scores"
+                            data-grid-row={studentRowMap[student.id]}
+                            data-grid-col={2}
                             className="w-20 text-center border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                           
                           {openCommentStudentId === student.id ? (
@@ -1947,6 +2102,10 @@ function ProgressTestTab({ classId, term, students, isESL, onDirtyChange }) {
                         <input type="number" min="0" max={totals.total_points || undefined} placeholder="—"
                           value={g.score ?? ''}
                           onChange={e => setGrade(student.id, 'score', e.target.value)}
+                          onKeyDown={handleGridCellKeyDown}
+                          data-grid-scope="progress-single-scores"
+                          data-grid-row={studentRowMap[student.id]}
+                          data-grid-col={0}
                           className="w-20 text-center border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                         {openCommentStudentId === student.id ? (
                           <div className="w-full space-y-1">
@@ -2013,6 +2172,7 @@ function StudentAttributesTab({ classId, term, students, onDirtyChange }) {
   const [attributes, setAttributes] = useState({})
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const draftKey = `gradebook:draft:attributes:${classId}:${term}`
 
   const ATTRIBUTE_FIELDS = [
     { key: 'confident', label: 'Confident' },
@@ -2042,8 +2202,13 @@ function StudentAttributesTab({ classId, term, students, onDirtyChange }) {
         engaged: row.engaged || '',
       }
     })
-    setAttributes(map)
+    setAttributes({ ...map, ...readDraft(draftKey, {}) })
   }
+
+  useEffect(() => {
+    const timer = setTimeout(() => writeDraft(draftKey, attributes), 350)
+    return () => clearTimeout(timer)
+  }, [draftKey, attributes])
 
   const setAttribute = (studentId, field, value) => {
     onDirtyChange?.(true)
@@ -2076,6 +2241,7 @@ function StudentAttributesTab({ classId, term, students, onDirtyChange }) {
     setSaving(false)
     setSaved(true)
     onDirtyChange?.(false)
+    clearDraft(draftKey)
     setTimeout(() => setSaved(false), 2000)
   }
 
@@ -2190,6 +2356,8 @@ function SummaryTab({ classId, term, students, isESL }) {
   const [data, setData] = useState({})
   const [loading, setLoading] = useState(true)
   const [attributes, setAttributes] = useState({})
+  const [finalCommentsByStudent, setFinalCommentsByStudent] = useState({})
+  const isFinalTerm = term === 'final_1' || term === 'final_2'
 
   const ATTRIBUTE_FIELDS = [
     { key: 'confident', label: 'Confident' },
@@ -2207,12 +2375,14 @@ function SummaryTab({ classId, term, students, isESL }) {
       { data: partData }, 
       { data: assignData }, 
       { data: ptData },
-      { data: attributesData }
+      { data: attributesData },
+      { data: finalCommentsData }
     ] = await Promise.all([
       supabase.from('participation_grades').select('*').eq('class_id', classId).eq('term', term),
       supabase.from('assignments').select('*').eq('class_id', classId).eq('term', term),
       supabase.from('progress_test_grades').select('*').eq('class_id', classId).eq('term', term),
       supabase.from('student_attributes').select('*').eq('class_id', classId).eq('term', term),
+      isFinalTerm ? supabase.from('term_comments').select('student_id, comment').eq('class_id', classId).eq('term', term) : Promise.resolve({ data: [] }),
     ])
 
     const assignmentIds = (assignData || []).map((a) => a.id)
@@ -2226,6 +2396,7 @@ function SummaryTab({ classId, term, students, isESL }) {
     const ptByStudent = {}
     const assignmentGradeByKey = {}
     const participationByStudent = {}
+    const commentsMap = {}
 
     attributesData?.forEach(row => {
       attributesMap[row.student_id] = {
@@ -2251,6 +2422,10 @@ function SummaryTab({ classId, term, students, isESL }) {
       ptByStudent[row.student_id] = row
     })
 
+    ;(finalCommentsData || []).forEach((row) => {
+      commentsMap[row.student_id] = row.comment || ''
+    })
+
     students.forEach(student => {
       const partScores = participationByStudent[student.id] || []
       const partAvg = avg(partScores)
@@ -2263,10 +2438,7 @@ function SummaryTab({ classId, term, students, isESL }) {
       }).filter(p => p !== null) || []
       const assignAvg = avg(assignPcts)
 
-      const attainment = weightedNormalized([
-        { value: partPct, weight: 20 },
-        { value: assignAvg, weight: 80 },
-      ])
+      const attainment = calcAttainmentPct({ participationPct: partPct, assignmentPct: assignAvg })
 
       const pt = ptByStudent[student.id]
       const ptOverall = pt?.overall_percentage ?? null
@@ -2275,14 +2447,12 @@ function SummaryTab({ classId, term, students, isESL }) {
       const hasAssignments = assignAvg != null
       const hasProgressTest = ptOverall != null
 
-      const total = weightedNormalized([
-        { value: attainment, weight: 75 },
-        { value: ptOverall, weight: 25 },
-      ])
+      const total = calcTotalPct({ attainmentPct: attainment, progressTestPct: ptOverall })
 
+      const hasFinalComment = !isFinalTerm || Boolean(String(commentsMap[student.id] || '').trim())
       const completedComponents = [hasParticipation, hasAssignments, hasProgressTest].filter(Boolean).length
       const calcStatus = completedComponents === 3
-        ? 'Complete'
+        ? (hasFinalComment ? 'Complete' : 'Partial')
         : completedComponents === 0
           ? 'Missing'
           : 'Partial'
@@ -2302,15 +2472,8 @@ function SummaryTab({ classId, term, students, isESL }) {
 
     setData(summary)
     setAttributes(attributesMap)
+    setFinalCommentsByStudent(commentsMap)
     setLoading(false)
-  }
-
-  const scoreColor = (score) => {
-    if (score == null) return 'text-gray-300'
-    if (score >= 80) return 'text-green-600'
-    if (score >= 60) return 'text-blue-600'
-    if (score >= 40) return 'text-yellow-600'
-    return 'text-red-600'
   }
 
   return (
@@ -2348,6 +2511,11 @@ function SummaryTab({ classId, term, students, isESL }) {
                 <th className="text-center px-4 py-3 font-medium bg-gray-200 text-gray-700 border-l border-gray-200">Overall</th>
                 <th className="text-center px-4 py-3 font-medium bg-gray-200 text-gray-700 border-l border-gray-200">Grade</th>
                 <th className="text-center px-4 py-3 font-medium bg-gray-200 text-gray-700 border-l border-gray-200">Status</th>
+                {isFinalTerm ? (
+                  <th className="text-center px-3 py-3 font-medium bg-gray-200 text-gray-700 border-l border-gray-200">
+                    Final Comment
+                  </th>
+                ) : null}
                 
                 {ATTRIBUTE_FIELDS.map(attr => (
                   <th key={attr.key} className="text-center px-3 py-3 font-medium bg-blue-100 text-blue-800 text-xs">
@@ -2377,9 +2545,9 @@ function SummaryTab({ classId, term, students, isESL }) {
                       </div>
                       <div className="text-xs text-gray-400">{student.student_id || '—'}</div>
                     </td>
-                    <td className={`px-4 py-3 text-center font-medium bg-gray-50 ${scoreColor(d.partPct)} border-l border-gray-200`}>{fmt(d.partPct)}</td>
-                    <td className={`px-4 py-3 text-center font-medium bg-gray-50 ${scoreColor(d.assignAvg)} border-l border-gray-200`}>{fmt(d.assignAvg)}</td>
-                    <td className={`px-4 py-3 text-center font-semibold bg-green-50 ${scoreColor(d.attainment)}`}>{fmt(d.attainment)}</td>
+                    <td className={`px-4 py-3 text-center font-medium bg-gray-50 ${scoreColorClass(d.partPct)} border-l border-gray-200`}>{fmt(d.partPct)}</td>
+                    <td className={`px-4 py-3 text-center font-medium bg-gray-50 ${scoreColorClass(d.assignAvg)} border-l border-gray-200`}>{fmt(d.assignAvg)}</td>
+                    <td className={`px-4 py-3 text-center font-semibold bg-green-50 ${scoreColorClass(d.attainment)}`}>{fmt(d.attainment)}</td>
                     
                     {isESL ? (
                       <>
@@ -2389,8 +2557,8 @@ function SummaryTab({ classId, term, students, isESL }) {
                       </>
                     ) : null}
 
-                    <td className={`px-4 py-3 text-center font-medium bg-green-50 ${scoreColor(d.ptOverall)}`}>{fmt(d.ptOverall)}</td>
-                    <td className={`px-4 py-3 text-center font-bold bg-gray-50 ${scoreColor(d.total)}`}>{fmt(d.total)}</td>
+                    <td className={`px-4 py-3 text-center font-medium bg-green-50 ${scoreColorClass(d.ptOverall)}`}>{fmt(d.ptOverall)}</td>
+                    <td className={`px-4 py-3 text-center font-bold bg-gray-50 ${scoreColorClass(d.total)}`}>{fmt(d.total)}</td>
                     <td className="px-4 py-3 text-center bg-gray-50">
                       <span className="font-semibold text-gray-800">{letterGradeFromPercentage(d.total)}</span>
                     </td>
@@ -2405,6 +2573,13 @@ function SummaryTab({ classId, term, students, isESL }) {
                         {d.calcStatus || 'Missing'}
                       </span>
                     </td>
+                    {isFinalTerm ? (
+                      <td className="px-3 py-3 text-center bg-gray-50 border-l border-gray-200">
+                        <span className="text-xs text-gray-600">
+                          {String(finalCommentsByStudent[student.id] || '').trim() ? 'Completed' : 'Required'}
+                        </span>
+                      </td>
+                    ) : null}
                     
                     {ATTRIBUTE_FIELDS.map(attr => (
                       <td key={attr.key} className="px-3 py-3 text-center bg-blue-50">
@@ -2429,6 +2604,7 @@ function CommentsTab({ classId, term, students, onDirtyChange }) {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [editingStudentId, setEditingStudentId] = useState(null)
+  const draftKey = `gradebook:draft:comments:${classId}:${term}`
 
   useEffect(() => { fetchComments() }, [classId, term])
   useEffect(() => { 
@@ -2444,9 +2620,14 @@ function CommentsTab({ classId, term, students, onDirtyChange }) {
       map[c.student_id] = c.comment 
       original[c.student_id] = c.comment
     })
-    setComments(map)
+    setComments({ ...map, ...readDraft(draftKey, {}) })
     setOriginalComments(original)
   }
+
+  useEffect(() => {
+    const timer = setTimeout(() => writeDraft(draftKey, comments), 350)
+    return () => clearTimeout(timer)
+  }, [draftKey, comments])
 
   const saveComment = async (studentId) => {
     setSaving(true)
@@ -2462,6 +2643,7 @@ function CommentsTab({ classId, term, students, onDirtyChange }) {
     setSaving(false)
     setSaved(true)
     setEditingStudentId(null)
+    clearDraft(draftKey)
     
     setTimeout(() => setSaved(false), 2000)
   }
@@ -2474,11 +2656,15 @@ function CommentsTab({ classId, term, students, onDirtyChange }) {
   const isDirty = (studentId) => {
     return comments[studentId] !== originalComments[studentId]
   }
+  const missingCount = students.filter((student) => !String(comments[student.id] || '').trim()).length
 
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <p className="text-sm text-gray-500">Write end of term comments for each student. Click box to expand.</p>
+        <p className="text-sm text-gray-500">
+          Write end of term comments for each student. Click box to expand.
+          <span className="ml-2 text-amber-700 font-medium">Missing: {missingCount}</span>
+        </p>
         {saved && <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 font-medium">✓ Saved</span>}
       </div>
       <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
