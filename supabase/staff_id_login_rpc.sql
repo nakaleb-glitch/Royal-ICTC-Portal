@@ -1,4 +1,4 @@
--- Allows pre-login Staff ID -> email lookup while keeping RLS on users table.
+-- Allows pre-login Staff ID / Student ID -> email lookup while keeping RLS on users table.
 -- Run once in Supabase SQL Editor.
 
 create or replace function public.get_email_by_staff_id(p_staff_id text)
@@ -11,6 +11,7 @@ as $$
   select u.email
   from public.users u
   where lower(u.staff_id) = lower(trim(p_staff_id))
+     or lower(u.student_id) = lower(trim(p_staff_id))
   limit 1;
 $$;
 
