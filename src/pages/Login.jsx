@@ -201,7 +201,7 @@ export default function Login() {
         </div>
 
         <p className="text-center text-xs text-gray-600 mt-6">
-          Royal School International · Academic Year 2026-2027
+          Royal School · Phu Lam Campus
         </p>
       </div>
     </div>
