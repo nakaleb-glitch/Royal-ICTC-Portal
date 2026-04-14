@@ -25,14 +25,9 @@ export default function Login() {
     setError('')
     setResetMessage(null)
     
-    if (portalMode === 'staff') {
-      const { error: signInError } = await signInWithStaffId(userId, password)
-      if (signInError) {
-        setError(signInError.message || 'Could not sign in. Please check credentials.')
-      }
-    } else if (portalMode === 'student') {
-      // Student login logic will be implemented here
-      setError('Student login coming soon')
+    const { error: signInError } = await signInWithStaffId(userId, password)
+    if (signInError) {
+      setError(signInError.message || 'Could not sign in. Please check credentials.')
     }
     
     setSubmitting(false)
