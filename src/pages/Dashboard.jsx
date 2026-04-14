@@ -1286,7 +1286,10 @@ export default function Dashboard() {
                           const schedule = teacherSchedule[`${debugDayOverride}-${row.period}`]
                           return (
                             <div key={idx} className="flex items-center gap-2 py-1 border-b border-gray-100 last:border-0">
-                              <div className="w-[75px] text-[10px] text-gray-500 shrink-0">{row.time.split(' - ')[0]}</div>
+                              <div className="w-[118px] shrink-0 leading-tight">
+                                <div className="text-[10px] font-medium text-gray-600">{row.label}</div>
+                                <div className="text-[10px] text-gray-500">{row.time}</div>
+                              </div>
                               <div className="flex-1 min-w-0">
                                 {schedule ? (
                                   <div className="text-sm font-medium text-gray-900 truncate">{schedule.subject}</div>
