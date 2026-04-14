@@ -222,30 +222,57 @@ serve(async (req) => {
     }
 
     // Fallback for orphaned auth users when linked profile rows are already gone.
+    let fallbackPassesRun = 0
+    const authDeletedPerPass: number[] = []
     if (authUserIds.size === 0) {
-      let page = 1
       const perPage = 200
-      while (true) {
-        const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage })
-        if (error) {
-          authErrors.push(`auth listUsers page ${page}: ${error.message}`)
+      const maxFallbackPasses = 5
+
+      for (let pass = 1; pass <= maxFallbackPasses; pass += 1) {
+        fallbackPassesRun = pass
+        const candidateIds = new Set<string>()
+        let page = 1
+
+        // First collect all candidates for this pass.
+        while (true) {
+          const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage })
+          if (error) {
+            authErrors.push(`auth listUsers page ${page}: ${error.message}`)
+            break
+          }
+          const users = data?.users || []
+          if (users.length === 0) break
+
+          users
+            .filter(isStudentAuthUserByMarker)
+            .forEach((u) => {
+              if (u?.id) candidateIds.add(u.id)
+            })
+
+          if (users.length < perPage) break
+          page += 1
+        }
+
+        authFallbackMatches += candidateIds.size
+        if (candidateIds.size === 0) {
+          authDeletedPerPass.push(0)
           break
         }
-        const users = data?.users || []
-        if (users.length === 0) break
 
-        const candidates = users.filter(isStudentAuthUserByMarker)
-        authFallbackMatches += candidates.length
-
-        for (const candidate of candidates) {
-          const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(candidate.id)
-          if (deleteError) authErrors.push(`${candidate.id}: ${deleteError.message}`)
-          else authDeletedByFallbackScan += 1
+        // Then delete candidates for this pass.
+        let deletedThisPass = 0
+        for (const candidateId of Array.from(candidateIds)) {
+          const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(candidateId)
+          if (deleteError) authErrors.push(`${candidateId}: ${deleteError.message}`)
+          else deletedThisPass += 1
         }
+        authDeletedPerPass.push(deletedThisPass)
+        authDeletedByFallbackScan += deletedThisPass
 
-        if (users.length < perPage) break
-        page += 1
+        // Stop if no progress in a pass.
+        if (deletedThisPass === 0) break
       }
+
       authDeleted += authDeletedByFallbackScan
     }
 
@@ -255,6 +282,8 @@ serve(async (req) => {
       auth_deleted: authDeleted,
       auth_deleted_by_fallback_scan: authDeletedByFallbackScan,
       auth_fallback_matches: authFallbackMatches,
+      fallback_passes_run: fallbackPassesRun,
+      auth_deleted_per_pass: authDeletedPerPass,
       auth_errors: authErrors,
       errors,
     }), {

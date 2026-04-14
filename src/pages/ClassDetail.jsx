@@ -400,6 +400,16 @@ export default function ClassDetail() {
           Teacher Resources
         </button>
         <button
+          onClick={() => setActiveTab('announcements')}
+          className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
+            activeTab === 'announcements'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Class Announcements
+        </button>
+        <button
           onClick={() => setActiveTab('uploads')}
           className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
             activeTab === 'uploads'
@@ -413,26 +423,24 @@ export default function ClassDetail() {
 
       {!selectedTerm ? (
         <div className="space-y-10">
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-             {/* Student List */}
-             <div className="lg:col-span-3 bg-white rounded-xl border border-gray-200 overflow-hidden" style={{ borderTopColor: '#1f86c7', borderTopWidth: 3 }}>
+          {activeTab === 'students' && (
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden" style={{ borderTopColor: '#1f86c7', borderTopWidth: 3 }}>
               <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">Student List</h3>
                 <span className="text-xs text-gray-500">{studentRoster.length} students</span>
               </div>
-               {studentRoster.length === 0 ? (
-                 <div className="p-6 text-sm text-gray-400">No students enrolled in this class yet.</div>
-               ) : (
-                 <div className="overflow-y-auto" style={{ maxHeight: 'calc(8 * 57px)' }}>
+              {studentRoster.length === 0 ? (
+                <div className="p-6 text-sm text-gray-400">No students enrolled in this class yet.</div>
+              ) : (
+                <div className="overflow-y-auto" style={{ maxHeight: 'calc(8 * 57px)' }}>
                   <table className="w-full text-sm">
-                      <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
-                        <tr>
-                          <th className="text-left px-3 py-3 text-gray-500 font-medium w-[80px]">Student ID</th>
-                          <th className="text-left px-3 py-3 text-gray-500 font-medium">Student Name</th>
-                          <th className="text-left px-3 py-3 text-gray-500 font-medium w-[40px]"></th>
-                        </tr>
-                      </thead>
+                    <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
+                      <tr>
+                        <th className="text-left px-3 py-3 text-gray-500 font-medium w-[80px]">Student ID</th>
+                        <th className="text-left px-3 py-3 text-gray-500 font-medium">Student Name</th>
+                        <th className="text-left px-3 py-3 text-gray-500 font-medium w-[40px]"></th>
+                      </tr>
+                    </thead>
                     <tbody className="divide-y divide-gray-300">
                       {studentRoster.map(student => (
                         <tr key={student.id} className="hover:bg-gray-50">
@@ -456,10 +464,10 @@ export default function ClassDetail() {
                 </div>
               )}
             </div>
+          )}
 
-            <div className="lg:col-span-8 space-y-4">
-              {/* Gradebooks Section */}
-              <div className="bg-white rounded-xl border border-gray-200 p-4" style={{ borderTopColor: '#d1232a', borderTopWidth: 3 }}>
+          {activeTab === 'gradebooks' && (
+            <div className="bg-white rounded-xl border border-gray-200 p-4" style={{ borderTopColor: '#d1232a', borderTopWidth: 3 }}>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Gradebooks</h3>
                 <div className="grid grid-cols-2 gap-4">
                   {TERMS.map(term => {
@@ -482,10 +490,11 @@ export default function ClassDetail() {
                     )
                   })}
                 </div>
-              </div>
+            </div>
+          )}
 
-              {/* Teacher Resources Section */}
-              <div className="bg-white rounded-xl border border-gray-200 p-4" style={{ borderTopColor: '#ffc612', borderTopWidth: 3 }}>
+          {activeTab === 'resources' && (
+            <div className="bg-white rounded-xl border border-gray-200 p-4" style={{ borderTopColor: '#ffc612', borderTopWidth: 3 }}>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Teacher Resources</h3>
                 <ResourceCards
                   level={cls.level}
@@ -493,9 +502,11 @@ export default function ClassDetail() {
                   programme={cls.programme}
                   subject={cls.subject}
                 />
-              </div>
+            </div>
+          )}
 
-              <div className="bg-white rounded-xl border border-gray-200 p-4" style={{ borderTopColor: '#22c55e', borderTopWidth: 3 }}>
+          {activeTab === 'announcements' && (
+            <div className="bg-white rounded-xl border border-gray-200 p-4" style={{ borderTopColor: '#22c55e', borderTopWidth: 3 }}>
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Class Announcements</h3>
                 {profile?.role === 'teacher' && profile?.id === cls.teacher_id && (
                   <>
@@ -644,67 +655,73 @@ export default function ClassDetail() {
                     )}
                   </div>
                 )}
-              </div>
-
-              {(profile?.role === 'admin' || (profile?.role === 'teacher' && profile?.id === cls.teacher_id)) && selectedAnnouncement && (
-                <div
-                  className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4"
-                  onClick={() => setSelectedAnnouncement(null)}
-                >
-                  <div
-                    className="w-full max-w-lg bg-white rounded-xl border border-gray-200 p-5 max-h-[min(90vh,32rem)] overflow-y-auto"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <h4 className="text-base font-semibold text-gray-900">{selectedAnnouncement.title}</h4>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {new Date(selectedAnnouncement.created_at).toLocaleDateString('en-GB')}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedAnnouncement(null)}
-                        className="text-gray-400 hover:text-gray-600 shrink-0"
-                        aria-label="Close announcement"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                    <div className="mt-4">
-                      <div className="text-xs font-medium text-gray-500">Message</div>
-                      <div className="text-sm text-gray-800 whitespace-pre-wrap mt-1">{selectedAnnouncement.message}</div>
-                      {selectedAnnouncement.link_url && (
-                        <div className="mt-4 text-xs">
-                          <span className="text-gray-500 font-medium">Link</span>
-                          <div className="mt-1">
-                            <a
-                              href={selectedAnnouncement.link_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline break-all"
-                            >
-                              {selectedAnnouncement.link_url}
-                            </a>
-                          </div>
-                        </div>
-                      )}
-                      {selectedAnnouncement.attachment_url && (
-                        <div className="mt-3">
-                          <span className="text-xs font-medium text-gray-500 block mb-1">Attachment</span>
-                          <AnnouncementPdfButton
-                            storagePath={selectedAnnouncement.attachment_url}
-                            fileName={selectedAnnouncement.attachment_name}
-                            className="text-sm text-blue-600 hover:underline disabled:opacity-60"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
-          </div>
+          )}
+
+          {activeTab === 'uploads' && (
+            <div className="bg-white rounded-xl border border-gray-200 p-6" style={{ borderTopColor: '#6366f1', borderTopWidth: 3 }}>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Weekly Uploads</h3>
+              <p className="text-sm text-gray-500">Coming soon...</p>
+            </div>
+          )}
+
+          {(profile?.role === 'admin' || (profile?.role === 'teacher' && profile?.id === cls.teacher_id)) && selectedAnnouncement && (
+            <div
+              className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4"
+              onClick={() => setSelectedAnnouncement(null)}
+            >
+              <div
+                className="w-full max-w-lg bg-white rounded-xl border border-gray-200 p-5 max-h-[min(90vh,32rem)] overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h4 className="text-base font-semibold text-gray-900">{selectedAnnouncement.title}</h4>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {new Date(selectedAnnouncement.created_at).toLocaleDateString('en-GB')}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedAnnouncement(null)}
+                    className="text-gray-400 hover:text-gray-600 shrink-0"
+                    aria-label="Close announcement"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="mt-4">
+                  <div className="text-xs font-medium text-gray-500">Message</div>
+                  <div className="text-sm text-gray-800 whitespace-pre-wrap mt-1">{selectedAnnouncement.message}</div>
+                  {selectedAnnouncement.link_url && (
+                    <div className="mt-4 text-xs">
+                      <span className="text-gray-500 font-medium">Link</span>
+                      <div className="mt-1">
+                        <a
+                          href={selectedAnnouncement.link_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline break-all"
+                        >
+                          {selectedAnnouncement.link_url}
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                  {selectedAnnouncement.attachment_url && (
+                    <div className="mt-3">
+                      <span className="text-xs font-medium text-gray-500 block mb-1">Attachment</span>
+                      <AnnouncementPdfButton
+                        storagePath={selectedAnnouncement.attachment_url}
+                        fileName={selectedAnnouncement.attachment_name}
+                        className="text-sm text-blue-600 hover:underline disabled:opacity-60"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
         </div>
       ) : (
