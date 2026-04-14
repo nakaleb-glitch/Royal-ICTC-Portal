@@ -101,11 +101,14 @@ serve(async (req) => {
       const student_id_ref = student.student_ref_id || null
       const email = makeStudentEmail(student_id)
 
-      if (!student_id || !full_name || !student_id_ref) {
+      // Always create account, fallback names gracefully
+      const finalFullName = full_name || student.name_vn || student_id
+      
+      if (!student_id || !student_id_ref) {
         errors.push({
           row: i + 1,
           student_id,
-          error: 'Missing required field(s): student_id, full_name, student_ref_id',
+          error: 'Missing required field(s): student_id, student_ref_id',
         })
         continue
       }
@@ -127,11 +130,11 @@ serve(async (req) => {
           email,
           password: 'royal@123',
           email_confirm: true,
-          user_metadata: {
-            full_name,
-            student_id,
-            force_password_change: true,
-          },
+        user_metadata: {
+          full_name: finalFullName,
+          student_id,
+          force_password_change: true,
+        },
         })
 
         if (createError || !created?.user?.id) {
@@ -152,7 +155,7 @@ serve(async (req) => {
          .upsert({
            id: userId,
            email: profileEmail,
-           full_name,
+           full_name: finalFullName,
            uid: student_id.toLowerCase().trim(),
            role: 'student',
            level,
