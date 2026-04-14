@@ -362,11 +362,9 @@ export default function ClassDetail() {
               if (!leave) return
             }
             sessionStorage.setItem('gradebook_unsaved_changes', '0')
-            if (selectedTerm) {
-              setSelectedTerm(null)
-              return
-            }
-            navigate(profile?.role === 'admin' ? '/admin/classes' : '/dashboard')
+            const hasHistory = window.history.length > 1
+            if (hasHistory) navigate(-1)
+            else navigate(profile?.role === 'admin' ? '/admin/classes' : '/dashboard')
           }}
           className="text-sm text-white px-3 py-1.5 rounded-lg mb-4 flex items-center gap-1 transition-colors"
           style={{ backgroundColor: '#1f86c7' }}
@@ -447,11 +445,17 @@ export default function ClassDetail() {
                 <div className="p-6 text-sm text-gray-400">No students enrolled in this class yet.</div>
               ) : (
                 <div className="overflow-y-auto" style={{ maxHeight: 'calc(8 * 57px)' }}>
-                  <table className="w-full text-sm">
+                  <table className="w-full text-sm table-fixed">
+                    <colgroup>
+                      <col className="w-[56px]" />
+                      <col className="w-[100px]" />
+                      <col className="w-[40%]" />
+                      <col className="w-[40%]" />
+                    </colgroup>
                     <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
                       <tr>
-                        <th className="text-left px-3 py-3 text-gray-500 font-medium w-[56px]">Profile Picture / Avatar</th>
-                        <th className="text-left px-3 py-3 text-gray-500 font-medium w-[80px]">Student ID</th>
+                        <th className="text-left px-3 py-3 text-gray-500 font-medium" aria-label="Avatar column"></th>
+                        <th className="text-left px-3 py-3 text-gray-500 font-medium">Student ID</th>
                         <th className="text-left px-3 py-3 text-gray-500 font-medium">Student Name (VN)</th>
                         <th className="text-left px-3 py-3 text-gray-500 font-medium">Student Name (ENG)</th>
                       </tr>
@@ -912,7 +916,19 @@ function Gradebook({ cls, term, termLabel, onBack, onUnsavedChange }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-gray-900">{termLabel}</h3>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleBackToTerms}
+            className="text-sm text-white px-3 py-1.5 rounded-lg transition-colors"
+            style={{ backgroundColor: '#1f86c7' }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#1a74ad'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#1f86c7'}
+          >
+            ← Go Back
+          </button>
+          <h3 className="text-lg font-semibold text-gray-900">{termLabel}</h3>
+        </div>
         <div className="flex items-center gap-3">
           {hasAnyUnsaved && (
             <span className="text-xs px-2 py-1 rounded-full font-medium bg-amber-100 text-amber-700 border border-amber-200">
