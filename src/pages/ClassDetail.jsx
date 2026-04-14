@@ -350,37 +350,65 @@ export default function ClassDetail() {
 
   if (loading) return <Layout><div className="text-center text-gray-400 py-20">Loading...</div></Layout>
   if (!cls) return <Layout><div className="text-center text-gray-400 py-20">Class not found.</div></Layout>
+  const selectedTermLabel = TERMS.find(t => t.key === selectedTerm)?.label
 
   return (
     <Layout>
-      <div className="mb-8">
-        <button
-          onClick={() => {
-            const hasUnsaved = hasUnsavedGradebook || sessionStorage.getItem('gradebook_unsaved_changes') === '1'
-            if (hasUnsaved) {
-              const leave = window.confirm('You have unsaved gradebook changes. Please click Save before leaving this page. Continue anyway?')
-              if (!leave) return
-            }
-            sessionStorage.setItem('gradebook_unsaved_changes', '0')
-            const hasHistory = window.history.length > 1
-            if (hasHistory) navigate(-1)
-            else navigate(profile?.role === 'admin' ? '/admin/classes' : '/dashboard')
-          }}
-          className="text-sm text-white px-3 py-1.5 rounded-lg mb-4 flex items-center gap-1 transition-colors"
-          style={{ backgroundColor: '#1f86c7' }}
-          onMouseEnter={(e) => e.target.style.backgroundColor = '#1a74ad'}
-          onMouseLeave={(e) => e.target.style.backgroundColor = '#1f86c7'}
-        >
-          ← Go Back
-        </button>
-        <h2 className="text-2xl font-bold text-gray-900">{cls.name}</h2>
-        <p className="text-gray-500 text-sm mt-1">
-          {cls.level === 'primary' ? 'Primary' : 'Secondary'} · {cls.programme === 'bilingual' ? 'Bilingual' : 'Integrated'} · 2026-2027
-        </p>
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <button
+            onClick={() => {
+              const hasUnsaved = hasUnsavedGradebook || sessionStorage.getItem('gradebook_unsaved_changes') === '1'
+              if (hasUnsaved) {
+                const leave = window.confirm('You have unsaved gradebook changes. Please click Save before leaving this page. Continue anyway?')
+                if (!leave) return
+              }
+              sessionStorage.setItem('gradebook_unsaved_changes', '0')
+              const hasHistory = window.history.length > 1
+              if (hasHistory) navigate(-1)
+              else navigate(profile?.role === 'admin' ? '/admin/classes' : '/dashboard')
+            }}
+            className="text-sm text-white px-3 py-1.5 rounded-lg mb-4 flex items-center gap-1 transition-colors"
+            style={{ backgroundColor: '#1f86c7' }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#1a74ad'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#1f86c7'}
+          >
+            ← Go Back
+          </button>
+          <h2 className="text-2xl font-bold text-gray-900">{cls.name}</h2>
+          <p className="text-gray-500 text-sm mt-1">
+            {cls.level === 'primary' ? 'Primary' : 'Secondary'} · {cls.programme === 'bilingual' ? 'Bilingual' : 'Integrated'} · 2026-2027
+          </p>
+        </div>
+        {selectedTerm && (
+          <div className="text-right mt-10">
+            <div className="text-lg font-semibold text-gray-900">{selectedTermLabel}</div>
+            <div className="text-sm text-gray-500">Teacher Gradebook V2</div>
+            <button
+              type="button"
+              onClick={() => {
+                const hasUnsaved = hasUnsavedGradebook || sessionStorage.getItem('gradebook_unsaved_changes') === '1'
+                if (hasUnsaved) {
+                  const leave = window.confirm('You have unsaved changes. Please click Save before leaving this gradebook. Continue anyway?')
+                  if (!leave) return
+                }
+                sessionStorage.setItem('gradebook_unsaved_changes', '0')
+                setHasUnsavedGradebook(false)
+                setSelectedTerm(null)
+              }}
+              className="mt-2 text-sm text-white px-3 py-1.5 rounded-lg transition-colors"
+              style={{ backgroundColor: '#1f86c7' }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#1a74ad'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#1f86c7'}
+            >
+              ← Go Back
+            </button>
+          </div>
+        )}
        </div>
 
       {/* Page Tabs */}
-      <div className="flex gap-1 border-b border-gray-200 mb-6">
+      <div className="flex gap-1 border-b border-gray-200 mb-4">
         <button
           onClick={() => handleTopTabChange('students')}
           className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
@@ -434,11 +462,10 @@ export default function ClassDetail() {
       </div>
 
       {!selectedTerm ? (
-        <div className="space-y-10">
+        <div className="space-y-6">
           {activeTab === 'students' && (
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden" style={{ borderTopColor: '#1f86c7', borderTopWidth: 3 }}>
-              <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">Student List</h3>
+              <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-end">
                 <span className="text-xs text-gray-500">{studentRoster.length} students</span>
               </div>
               {studentRoster.length === 0 ? (
@@ -487,14 +514,13 @@ export default function ClassDetail() {
           )}
 
           {activeTab === 'gradebooks' && (
-            <div className="bg-white rounded-xl border border-gray-200 p-4" style={{ borderTopColor: '#d1232a', borderTopWidth: 3 }}>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Gradebooks</h3>
-                <div className="grid grid-cols-2 gap-4">
+            <div className="bg-white rounded-xl border border-gray-200 p-3.5" style={{ borderTopColor: '#d1232a', borderTopWidth: 3 }}>
+                <div className="grid grid-cols-2 gap-3">
                   {TERMS.map(term => {
                     const isCurrentTerm = detectCurrentTerm() === term.key
                     return (
                       <button key={term.key} onClick={() => setSelectedTerm(term.key)}
-                        className={`bg-white rounded-xl border p-6 text-left hover:shadow-sm transition-all relative ${isCurrentTerm ? 'border-green-400 bg-green-50' : 'border-gray-200'}`}
+                        className={`bg-white rounded-xl border p-5 text-left hover:shadow-sm transition-all relative ${isCurrentTerm ? 'border-green-400 bg-green-50' : 'border-gray-200'}`}
                         style={{ borderTopColor: isCurrentTerm ? '#22c55e' : '#9ca3af', borderTopWidth: 3 }}>
                         {isCurrentTerm && (
                           <span className="absolute top-3 right-3 text-[10px] px-2 py-0.5 bg-green-600 text-white rounded-full font-medium">
@@ -514,8 +540,7 @@ export default function ClassDetail() {
           )}
 
           {activeTab === 'resources' && (
-            <div className="bg-white rounded-xl border border-gray-200 p-4" style={{ borderTopColor: '#ffc612', borderTopWidth: 3 }}>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Teacher Resources</h3>
+            <div className="bg-white rounded-xl border border-gray-200 p-3.5" style={{ borderTopColor: '#ffc612', borderTopWidth: 3 }}>
                 <ResourceCards
                   level={cls.level}
                   grade={String(cls.name || '').trim().match(/^(\d+)/)?.[1] || null}
@@ -526,8 +551,7 @@ export default function ClassDetail() {
           )}
 
           {activeTab === 'announcements' && (
-            <div className="bg-white rounded-xl border border-gray-200 p-4" style={{ borderTopColor: '#22c55e', borderTopWidth: 3 }}>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Class Announcements</h3>
+            <div className="bg-white rounded-xl border border-gray-200 p-3.5" style={{ borderTopColor: '#22c55e', borderTopWidth: 3 }}>
                 {profile?.role === 'teacher' && profile?.id === cls.teacher_id && (
                   <>
                     <div className="flex items-center justify-between mb-3">
@@ -679,8 +703,7 @@ export default function ClassDetail() {
           )}
 
           {activeTab === 'uploads' && (
-            <div className="bg-white rounded-xl border border-gray-200 p-6" style={{ borderTopColor: '#6366f1', borderTopWidth: 3 }}>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Weekly Uploads</h3>
+            <div className="bg-white rounded-xl border border-gray-200 p-4" style={{ borderTopColor: '#6366f1', borderTopWidth: 3 }}>
               <p className="text-sm text-gray-500">Coming soon...</p>
             </div>
           )}
@@ -748,8 +771,6 @@ export default function ClassDetail() {
         <Gradebook
           cls={cls}
           term={selectedTerm}
-          termLabel={TERMS.find(t => t.key === selectedTerm)?.label}
-          onBack={() => setSelectedTerm(null)}
           onUnsavedChange={setHasUnsavedGradebook}
         />
       )}
@@ -835,10 +856,14 @@ const letterGradeFromPercentage = (score) => {
   return 'E'
 }
 
-const STUDENT_AVATAR_COL_CLASS = 'text-left px-3 py-3 text-gray-500 font-medium sticky left-0 bg-gray-50 w-[72px] min-w-[72px]'
-const STUDENT_INFO_COL_CLASS = 'text-left px-4 py-3 text-gray-500 font-medium bg-gray-50 w-[300px] min-w-[300px]'
-const STUDENT_AVATAR_CELL_CLASS = 'px-3 py-3 sticky left-0 bg-white'
-const STUDENT_INFO_CELL_CLASS = 'px-4 py-3 bg-white'
+const STUDENT_AVATAR_COL_CLASS = 'text-left px-3 py-3 text-slate-600 font-semibold sticky left-0 z-20 bg-slate-100/95 w-[64px] min-w-[64px] border-r border-slate-200'
+const STUDENT_INFO_COL_CLASS = 'text-left px-4 py-3 text-slate-700 font-semibold sticky left-[64px] z-20 bg-slate-100/95 w-[240px] min-w-[240px] border-r border-slate-200'
+const STUDENT_AVATAR_CELL_CLASS = 'px-3 py-3 sticky left-0 z-10 bg-white/95 backdrop-blur-sm border-r border-slate-100'
+const STUDENT_INFO_CELL_CLASS = 'px-4 py-3 sticky left-[64px] z-10 bg-white/95 backdrop-blur-sm border-r border-slate-100'
+const V2_TABLE_WRAP_CLASS = 'bg-white rounded-2xl border border-slate-200 shadow-sm overflow-x-auto'
+const V2_TABLE_HEAD_CLASS = 'bg-slate-100/80 border-b border-slate-200'
+const V2_ROW_CLASS = 'hover:bg-sky-50/40 min-h-[58px]'
+const V2_PRIMARY_BTN = 'px-4 py-2 text-sm font-semibold text-white rounded-xl bg-sky-600 hover:bg-sky-700 disabled:bg-slate-300 disabled:text-slate-500 transition-colors'
 
 const weightedNormalized = (items) => {
   const present = items.filter((item) => item.value != null)
@@ -933,11 +958,12 @@ const handleGridCellKeyDown = (event) => {
 }
 
 // ── Gradebook Shell ───────────────────────────────────────────────────────────
-function Gradebook({ cls, term, termLabel, onBack, onUnsavedChange }) {
+function Gradebook({ cls, term, onUnsavedChange }) {
   const [activeTab, setActiveTab] = useState('participation')
   const [students, setStudents] = useState([])
   const [loading, setLoading] = useState(true)
   const [dirtyTabs, setDirtyTabs] = useState({})
+  const [helpOpen, setHelpOpen] = useState(false)
   const isESL = cls.subject === 'ESL'
   const isFinal = term === 'final_1' || term === 'final_2'
 
@@ -993,64 +1019,136 @@ function Gradebook({ cls, term, termLabel, onBack, onUnsavedChange }) {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [hasAnyUnsaved])
 
-  const handleBackToTerms = () => {
-    if (hasAnyUnsaved) {
-      const leave = window.confirm('You have unsaved changes. Please click Save before leaving this gradebook. Continue anyway?')
-      if (!leave) return
-    }
-    onBack()
-  }
-
   const handleTabChange = (nextTab) => {
     if (nextTab === activeTab) return
     if (dirtyTabs[activeTab]) {
       const leave = window.confirm('You have unsaved changes in this tab. Please click Save before switching tabs. Continue anyway?')
       if (!leave) return
     }
+    setHelpOpen(false)
     setActiveTab(nextTab)
   }
 
+  const isSaveTab = ['participation', 'assignments', 'progress_test', 'student_attributes'].includes(activeTab)
+  const HELP_BY_TAB = {
+    participation: [
+      'Enter weekly participation scores out of 10.',
+      'Use comment buttons for week-specific notes.',
+      'Use Save to persist scores and comments.',
+    ],
+    assignments: [
+      'Create assignments with name and total points.',
+      'Scores are converted to percentages and averaged equally.',
+      'Use A (absent) to exclude a score from averaging.',
+    ],
+    progress_test: [
+      isESL ? 'Set total points for R/W, Listening, and Speaking.' : 'Set total points, then enter each student score.',
+      isESL ? 'Overall is the average of the three component percentages.' : 'Overall is score divided by total points.',
+      'Use Save to persist test scores and comments.',
+    ],
+    student_attributes: [
+      'Mark each attribute as G, S, or N.',
+      'Tap the same value again to clear it.',
+      'Use Save to persist attribute selections.',
+    ],
+    summary: [
+      'Summary values are calculated from saved Participation, Assignments, and Progress Test.',
+      'Total = Attainment (75%) + Progress Test (25%).',
+      'Final terms require final comments for Complete status.',
+    ],
+    comments: [
+      'Write end-of-term comments per student.',
+      'Comments are required for Final 1 and Final 2 completion.',
+      'Missing counter shows students without comments.',
+    ],
+  }
+
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-gray-900">{termLabel}</h3>
+    <div className="bg-gradient-to-b from-sky-50/70 to-white border border-sky-100 rounded-2xl p-4 md:p-5">
+      <div className="flex flex-wrap items-center justify-end gap-3 mb-3">
         <div className="flex items-center gap-3">
           {hasAnyUnsaved && (
-            <span className="text-xs px-2 py-1 rounded-full font-medium bg-amber-100 text-amber-700 border border-amber-200">
+            <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-amber-100 text-amber-700 border border-amber-200">
               Unsaved Changes
             </span>
           )}
-          <span className="text-sm text-gray-500">{students.length} students</span>
-          <button
-            type="button"
-            onClick={handleBackToTerms}
-            className="text-sm text-white px-3 py-1.5 rounded-lg transition-colors"
-            style={{ backgroundColor: '#1f86c7' }}
-            onMouseEnter={(e) => e.target.style.backgroundColor = '#1a74ad'}
-            onMouseLeave={(e) => e.target.style.backgroundColor = '#1f86c7'}
-          >
-            ← Go Back
-          </button>
         </div>
       </div>
 
       {loading ? (
         <div className="text-center text-gray-400 py-20">Loading students...</div>
       ) : students.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-400">
+        <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-400 shadow-sm">
           No students enrolled in this class yet.
         </div>
       ) : (
         <>
-          <div className="flex gap-1 border-b border-gray-200 mb-6">
-            {TABS.map(tab => (
-              <button key={tab.key} onClick={() => handleTabChange(tab.key)}
-                className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                  activeTab === tab.key ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}>
-                {tab.label}
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="inline-flex flex-wrap gap-1.5 p-1.5 rounded-2xl bg-slate-100 border border-slate-200">
+              {TABS.map(tab => (
+                <button key={tab.key} onClick={() => handleTabChange(tab.key)}
+                  className={`px-4 py-2 text-sm font-semibold rounded-xl transition-colors ${
+                    activeTab === tab.key
+                      ? 'bg-white text-sky-700 shadow-sm border border-slate-200'
+                      : 'text-slate-600 hover:text-slate-800 hover:bg-white/70'
+                  }`}>
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            <div className="relative flex items-center gap-2">
+              {activeTab === 'assignments' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    document.dispatchEvent(new CustomEvent('gradebook-assignment-toggle-form'))
+                  }}
+                  className="px-3 py-2 text-sm font-semibold border border-slate-300 text-slate-700 rounded-xl bg-white hover:bg-slate-50"
+                >
+                  + New Assignment
+                </button>
+              )}
+              {isSaveTab && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    document.dispatchEvent(new CustomEvent('gradebook-save-tab', { detail: { tab: activeTab } }))
+                  }}
+                  className={V2_PRIMARY_BTN}
+                >
+                  Save
+                </button>
+              )}
+              {activeTab === 'summary' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    document.dispatchEvent(new CustomEvent('gradebook-summary-refresh'))
+                  }}
+                  className="px-3 py-2 text-sm font-semibold border border-slate-300 text-slate-700 rounded-xl bg-white hover:bg-slate-50"
+                >
+                  ↻ Refresh
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setHelpOpen((prev) => !prev)}
+                className="w-8 h-8 rounded-full border border-slate-300 bg-white text-slate-600 text-sm font-bold hover:bg-slate-50"
+                aria-label="Show tab guidance"
+              >
+                ?
               </button>
-            ))}
+              {helpOpen && (
+                <div className="absolute right-0 top-10 z-30 w-80 rounded-xl border border-slate-200 bg-white shadow-lg p-3">
+                  <div className="text-xs font-semibold text-slate-700 mb-2">Tab guidance</div>
+                  <ul className="text-xs text-slate-600 space-y-1.5">
+                    {(HELP_BY_TAB[activeTab] || []).map((line) => (
+                      <li key={line}>• {line}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           </div>
 
           {activeTab === 'participation' && <ParticipationTab classId={cls.id} term={term} students={students} onDirtyChange={(value) => setTabDirty('participation', value)} />}
@@ -1069,7 +1167,6 @@ function Gradebook({ cls, term, termLabel, onBack, onUnsavedChange }) {
 function ParticipationTab({ classId, term, students, onDirtyChange }) {
   const [grades, setGrades] = useState({})
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
   const [openCommentKey, setOpenCommentKey] = useState(null)
   const [draftComment, setDraftComment] = useState('')
   const draftKey = `gradebook:draft:participation:${classId}:${term}`
@@ -1111,6 +1208,7 @@ function ParticipationTab({ classId, term, students, onDirtyChange }) {
   }
 
   const saveAll = async () => {
+    if (saving) return
     setSaving(true)
     const rows = []
     weekSchedule.forEach(({ week, isNoScore }) => {
@@ -1135,11 +1233,17 @@ function ParticipationTab({ classId, term, students, onDirtyChange }) {
     })
     await supabase.from('participation_grades').upsert(rows, { onConflict: 'class_id,student_id,term,week' })
     setSaving(false)
-    setSaved(true)
     onDirtyChange?.(false)
     clearDraft(draftKey)
-    setTimeout(() => setSaved(false), 2000)
   }
+
+  useEffect(() => {
+    const handler = (event) => {
+      if (event.detail?.tab === 'participation') saveAll()
+    }
+    document.addEventListener('gradebook-save-tab', handler)
+    return () => document.removeEventListener('gradebook-save-tab', handler)
+  })
 
   const getAvg = (studentId) => {
     const scores = weekSchedule
@@ -1164,16 +1268,9 @@ function ParticipationTab({ classId, term, students, onDirtyChange }) {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <p className="text-sm text-gray-500">Weekly participation scores out of 10.</p>
-        <button onClick={saveAll} disabled={saving}
-          className="px-4 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300">
-          {saving ? 'Saving...' : saved ? '✓ Saved' : 'Save'}
-        </button>
-      </div>
-      <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+      <div className={V2_TABLE_WRAP_CLASS}>
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className={V2_TABLE_HEAD_CLASS}>
             <tr>
               <th className={STUDENT_AVATAR_COL_CLASS}></th>
               <th className={STUDENT_INFO_COL_CLASS}>Student Information</th>
@@ -1191,7 +1288,7 @@ function ParticipationTab({ classId, term, students, onDirtyChange }) {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {students.map(student => (
-              <tr key={student.id} className="hover:bg-gray-50 min-h-[56px]">
+              <tr key={student.id} className={V2_ROW_CLASS}>
                 <td className={STUDENT_AVATAR_CELL_CLASS}>
                   <ProfileAvatar 
                     avatarUrl={student.avatar_url} 
@@ -1304,7 +1401,6 @@ function AssignmentsTab({ classId, term, students, onDirtyChange }) {
   const [showForm, setShowForm] = useState(false)
   const [newAssignment, setNewAssignment] = useState({ name: '', max_points: '' })
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
   const [openCommentKey, setOpenCommentKey] = useState(null)
   const [draftComment, setDraftComment] = useState('')
   const [deletingAssignmentId, setDeletingAssignmentId] = useState(null)
@@ -1397,6 +1493,7 @@ function AssignmentsTab({ classId, term, students, onDirtyChange }) {
   }
 
   const saveAll = async () => {
+    if (saving) return
     setSaving(true)
     const rows = []
     assignments.forEach(assignment => {
@@ -1416,28 +1513,26 @@ function AssignmentsTab({ classId, term, students, onDirtyChange }) {
     })
     await supabase.from('assignment_grades').upsert(rows, { onConflict: 'assignment_id,student_id' })
     setSaving(false)
-    setSaved(true)
     onDirtyChange?.(false)
     clearDraft(draftKey)
-    setTimeout(() => setSaved(false), 2000)
   }
+
+  useEffect(() => {
+    const handler = (event) => {
+      if (event.detail?.tab === 'assignments') saveAll()
+    }
+    document.addEventListener('gradebook-save-tab', handler)
+    return () => document.removeEventListener('gradebook-save-tab', handler)
+  })
+
+  useEffect(() => {
+    const handler = () => setShowForm((prev) => !prev)
+    document.addEventListener('gradebook-assignment-toggle-form', handler)
+    return () => document.removeEventListener('gradebook-assignment-toggle-form', handler)
+  }, [])
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <p className="text-sm text-gray-500">Create assignments and enter student scores. Absent students are excluded from averages.</p>
-        <div className="flex gap-2">
-          <button onClick={() => setShowForm(!showForm)} className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">
-            + New Assignment
-          </button>
-          {assignments.length > 0 && (
-            <button onClick={saveAll} disabled={saving} className="px-4 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300">
-              {saving ? 'Saving...' : saved ? '✓ Saved' : 'Save'}
-            </button>
-          )}
-        </div>
-      </div>
-
       {showForm && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 flex gap-3 items-end">
           <div>
@@ -1484,9 +1579,9 @@ function AssignmentsTab({ classId, term, students, onDirtyChange }) {
       {assignments.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-400">No assignments yet. Create one to get started.</div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+        <div className={V2_TABLE_WRAP_CLASS}>
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className={V2_TABLE_HEAD_CLASS}>
               <tr>
                 <th className={STUDENT_AVATAR_COL_CLASS}></th>
               <th className={STUDENT_INFO_COL_CLASS}>Student Information</th>
@@ -1513,7 +1608,7 @@ function AssignmentsTab({ classId, term, students, onDirtyChange }) {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {students.map(student => (
-                <tr key={student.id} className="hover:bg-gray-50 min-h-[56px]">
+                <tr key={student.id} className={V2_ROW_CLASS}>
                   <td className={STUDENT_AVATAR_CELL_CLASS}>
                     <ProfileAvatar 
                       avatarUrl={student.avatar_url} 
@@ -1663,7 +1758,6 @@ function ProgressTestTab({ classId, term, students, isESL, onDirtyChange }) {
       : { total_points: '' }
   )
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
   const [openCommentStudentId, setOpenCommentStudentId] = useState(null)
   const [draftComment, setDraftComment] = useState('')
   const gradesDraftKey = `gradebook:draft:progress:${classId}:${term}:${isESL ? 'esl' : 'single'}:grades`
@@ -1741,6 +1835,7 @@ function ProgressTestTab({ classId, term, students, isESL, onDirtyChange }) {
   }
 
   const saveAll = async () => {
+    if (saving) return
     setSaving(true)
     const rows = students.map(student => {
       const g = grades[student.id] || {}
@@ -1796,25 +1891,22 @@ function ProgressTestTab({ classId, term, students, isESL, onDirtyChange }) {
     }
 
     setSaving(false)
-    setSaved(true)
     onDirtyChange?.(false)
     clearDraft(gradesDraftKey)
     clearDraft(totalsDraftKey)
-    setTimeout(() => setSaved(false), 2000)
   }
+
+  useEffect(() => {
+    const handler = (event) => {
+      if (event.detail?.tab === 'progress_test') saveAll()
+    }
+    document.addEventListener('gradebook-save-tab', handler)
+    return () => document.removeEventListener('gradebook-save-tab', handler)
+  })
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <p className="text-sm text-gray-500">
-          {isESL ? 'Enter total points for each component, then student scores.' : 'Enter total points for the test, then student scores.'}
-        </p>
-        <button onClick={saveAll} disabled={saving} className="px-4 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300">
-          {saving ? 'Saving...' : saved ? '✓ Saved' : 'Save'}
-        </button>
-      </div>
-
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 flex gap-6 items-end">
+      <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2.5 mb-3 flex gap-3 items-end">
         {isESL ? (
           <>
             <div>
@@ -1824,7 +1916,7 @@ function ProgressTestTab({ classId, term, students, isESL, onDirtyChange }) {
                   onDirtyChange?.(true)
                   setTotals(prev => ({ ...prev, rw_total: e.target.value }))
                 }}
-                className="w-32 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="w-24 border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
               <label className="text-xs font-medium text-gray-500 block mb-1">Listening — Total Points</label>
@@ -1833,7 +1925,7 @@ function ProgressTestTab({ classId, term, students, isESL, onDirtyChange }) {
                   onDirtyChange?.(true)
                   setTotals(prev => ({ ...prev, l_total: e.target.value }))
                 }}
-                className="w-32 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="w-24 border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
               <label className="text-xs font-medium text-gray-500 block mb-1">Speaking — Total Points</label>
@@ -1842,7 +1934,7 @@ function ProgressTestTab({ classId, term, students, isESL, onDirtyChange }) {
                   onDirtyChange?.(true)
                   setTotals(prev => ({ ...prev, s_total: e.target.value }))
                 }}
-                className="w-32 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="w-24 border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
           </>
         ) : (
@@ -1853,44 +1945,37 @@ function ProgressTestTab({ classId, term, students, isESL, onDirtyChange }) {
                 onDirtyChange?.(true)
                 setTotals(prev => ({ ...prev, total_points: e.target.value }))
               }}
-              className="w-32 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              className="w-24 border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
         )}
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+      <div className={V2_TABLE_WRAP_CLASS}>
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              <th colSpan={2} className="text-left px-4 py-3 text-gray-500 font-medium sticky left-0 bg-gray-50 w-[280px]">Student Information</th>
-              {isESL ? (
-                <>
-              <th colSpan={3} className="text-center px-3 py-2 font-medium bg-gray-200 text-gray-800 border-l border-gray-300" style={{ backgroundClip: 'padding-box' }}>Progress Test - Scores</th>
-              <th colSpan={4} className="text-center px-3 py-2 font-medium bg-green-100 text-green-800 border-l border-gray-300" style={{ backgroundClip: 'padding-box' }}>Progress Test - Percentages</th>
-                </>
-              ) : (
-                <>
-                <th className="text-center px-3 py-3 text-gray-500 font-medium min-w-32 border-l border-gray-300" style={{ backgroundClip: 'padding-box' }}></th>
-                <th className="text-center bg-green-100 border-l border-gray-300" style={{ backgroundClip: 'padding-box' }}></th>
-                </>
-              )}
-            </tr>
+          <thead className={V2_TABLE_HEAD_CLASS}>
             <tr>
               <th className={STUDENT_AVATAR_COL_CLASS}></th>
-              <th className={STUDENT_INFO_COL_CLASS}></th>
+              <th className={STUDENT_INFO_COL_CLASS}>Student Information</th>
               {isESL ? (
                 <>
-              <th className="text-center px-3 py-3 font-medium min-w-36 bg-gray-200 text-gray-700 border-l border-gray-200">Reading & Writing</th>
-              <th className="text-center px-3 py-3 font-medium min-w-32 bg-gray-200 text-gray-700 border-l border-gray-200">Listening</th>
-              <th className="text-center px-3 py-3 font-medium min-w-32 bg-gray-200 text-gray-700 border-l border-gray-200">Speaking</th>
-                <th className="text-center px-3 py-3 font-medium min-w-36 bg-green-100 text-green-800 border-l border-gray-300" style={{ backgroundClip: 'padding-box' }}>Reading & Writing</th>
-              <th className="text-center px-3 py-3 font-medium min-w-32 bg-green-100 text-green-800 border-l border-gray-300" style={{ backgroundClip: 'padding-box' }}>Listening</th>
-              <th className="text-center px-3 py-3 font-medium min-w-32 bg-green-100 text-green-800 border-l border-gray-300" style={{ backgroundClip: 'padding-box' }}>Speaking</th>
+                  <th className="text-center px-3 py-3 font-medium min-w-36 bg-gray-200 text-gray-700 border-l border-gray-200">Reading & Writing - Score</th>
+                  <th className="text-center px-3 py-3 font-medium min-w-32 bg-gray-200 text-gray-700 border-l border-gray-200">Listening - Score</th>
+                  <th className="text-center px-3 py-3 font-medium min-w-32 bg-gray-200 text-gray-700 border-l border-gray-200">Speaking - Score</th>
+                  <th className="text-center px-3 py-3 font-medium min-w-36 bg-green-100 text-green-800 border-l border-gray-300" style={{ backgroundClip: 'padding-box' }}>Reading & Writing - %</th>
+                  <th className="text-center px-3 py-3 font-medium min-w-32 bg-green-100 text-green-800 border-l border-gray-300" style={{ backgroundClip: 'padding-box' }}>Listening - %</th>
+                  <th className="text-center px-3 py-3 font-medium min-w-32 bg-green-100 text-green-800 border-l border-gray-300" style={{ backgroundClip: 'padding-box' }}>Speaking - %</th>
+                  <th className="text-center px-4 py-3 font-medium min-w-24 bg-green-100 text-green-800 border-l border-gray-200" style={{ backgroundClip: 'padding-box' }}>Overall</th>
                 </>
               ) : (
-                <th className="text-center px-3 py-3 text-gray-500 font-medium min-w-32">Score {totals.total_points ? `/ ${totals.total_points}` : ''}</th>
+                <>
+                <th className="text-center px-3 py-3 font-medium bg-gray-200 text-gray-800 border-l border-gray-300 min-w-40" style={{ backgroundClip: 'padding-box' }}>
+                  Progress Test - Points
+                </th>
+                <th className="text-center px-3 py-3 font-medium bg-green-100 text-green-800 border-l border-gray-300 min-w-36" style={{ backgroundClip: 'padding-box' }}>
+                  Progress Test - Percentage
+                </th>
+                </>
               )}
-                <th className="text-center px-4 py-3 font-medium min-w-24 bg-green-100 text-green-800 border-l border-gray-200" style={{ backgroundClip: 'padding-box' }}>Overall</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -1898,7 +1983,7 @@ function ProgressTestTab({ classId, term, students, isESL, onDirtyChange }) {
               const g = grades[student.id] || {}
               const overall = getOverall(student.id)
               return (
-                <tr key={student.id} className="hover:bg-gray-50 min-h-[56px]">
+                <tr key={student.id} className={V2_ROW_CLASS}>
                   <td className={STUDENT_AVATAR_CELL_CLASS}>
                     <ProfileAvatar 
                       avatarUrl={student.avatar_url} 
@@ -2171,7 +2256,6 @@ function ProgressTestTab({ classId, term, students, isESL, onDirtyChange }) {
 function StudentAttributesTab({ classId, term, students, onDirtyChange }) {
   const [attributes, setAttributes] = useState({})
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
   const draftKey = `gradebook:draft:attributes:${classId}:${term}`
 
   const ATTRIBUTE_FIELDS = [
@@ -2219,6 +2303,7 @@ function StudentAttributesTab({ classId, term, students, onDirtyChange }) {
   }
 
   const saveAll = async () => {
+    if (saving) return
     setSaving(true)
     const rows = students.map((student) => {
       const values = attributes[student.id] || {}
@@ -2239,28 +2324,23 @@ function StudentAttributesTab({ classId, term, students, onDirtyChange }) {
       .upsert(rows, { onConflict: 'class_id,student_id,term' })
 
     setSaving(false)
-    setSaved(true)
     onDirtyChange?.(false)
     clearDraft(draftKey)
-    setTimeout(() => setSaved(false), 2000)
   }
+
+  useEffect(() => {
+    const handler = (event) => {
+      if (event.detail?.tab === 'student_attributes') saveAll()
+    }
+    document.addEventListener('gradebook-save-tab', handler)
+    return () => document.removeEventListener('gradebook-save-tab', handler)
+  })
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <p className="text-sm text-gray-500">Set G/S/N for each student attribute criterion.</p>
-        <button
-          onClick={saveAll}
-          disabled={saving}
-          className="px-4 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300"
-        >
-          {saving ? 'Saving...' : saved ? '✓ Saved' : 'Save'}
-        </button>
-      </div>
-
-      <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+      <div className={V2_TABLE_WRAP_CLASS}>
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className={V2_TABLE_HEAD_CLASS}>
             <tr>
               <th className={STUDENT_AVATAR_COL_CLASS}></th>
               <th className={STUDENT_INFO_COL_CLASS}>Student Information</th>
@@ -2275,7 +2355,7 @@ function StudentAttributesTab({ classId, term, students, onDirtyChange }) {
             {students.map((student) => {
               const row = attributes[student.id] || {}
               return (
-                <tr key={student.id} className="hover:bg-gray-50 min-h-[56px]">
+                <tr key={student.id} className={V2_ROW_CLASS}>
                   <td className={STUDENT_AVATAR_CELL_CLASS}>
                     <ProfileAvatar 
                       avatarUrl={student.avatar_url} 
@@ -2295,15 +2375,15 @@ function StudentAttributesTab({ classId, term, students, onDirtyChange }) {
                      const currentValue = row[field.key] ?? ''
                      return (
                        <td key={field.key} className="px-3 py-2 text-center border-l border-gray-300 bg-blue-50" style={{ backgroundClip: 'padding-box' }}>
-                         <div className="flex justify-center gap-2">
+                        <div className="flex justify-center gap-1">
                            {/* G Button - Good */}
                            <button
                              type="button"
                              onClick={() => setAttribute(student.id, field.key, currentValue === 'G' ? '' : 'G')}
-                             className={`w-8 h-8 rounded-full text-sm font-bold transition-all flex items-center justify-center ${
+                            className={`min-w-[44px] h-9 rounded-lg text-sm font-bold transition-all flex items-center justify-center ${
                                currentValue === 'G'
-                                 ? 'bg-green-500 text-white shadow-sm'
-                                 : 'bg-white border-2 border-gray-200 text-gray-500 hover:border-green-400 hover:text-green-600'
+                                ? 'bg-green-500 text-white shadow-sm ring-2 ring-green-200'
+                                : 'bg-white border-2 border-gray-200 text-gray-500 hover:border-green-400 hover:text-green-600'
                              }`}
                              title="Good"
                            >
@@ -2314,10 +2394,10 @@ function StudentAttributesTab({ classId, term, students, onDirtyChange }) {
                            <button
                              type="button"
                              onClick={() => setAttribute(student.id, field.key, currentValue === 'S' ? '' : 'S')}
-                             className={`w-8 h-8 rounded-full text-sm font-bold transition-all flex items-center justify-center ${
+                            className={`min-w-[44px] h-9 rounded-lg text-sm font-bold transition-all flex items-center justify-center ${
                                currentValue === 'S'
-                                 ? 'bg-amber-500 text-white shadow-sm'
-                                 : 'bg-white border-2 border-gray-200 text-gray-500 hover:border-amber-400 hover:text-amber-600'
+                                ? 'bg-amber-500 text-white shadow-sm ring-2 ring-amber-200'
+                                : 'bg-white border-2 border-gray-200 text-gray-500 hover:border-amber-400 hover:text-amber-600'
                              }`}
                              title="Satisfactory"
                            >
@@ -2328,10 +2408,10 @@ function StudentAttributesTab({ classId, term, students, onDirtyChange }) {
                            <button
                              type="button"
                              onClick={() => setAttribute(student.id, field.key, currentValue === 'N' ? '' : 'N')}
-                             className={`w-8 h-8 rounded-full text-sm font-bold transition-all flex items-center justify-center ${
+                            className={`min-w-[44px] h-9 rounded-lg text-sm font-bold transition-all flex items-center justify-center ${
                                currentValue === 'N'
-                                 ? 'bg-red-500 text-white shadow-sm'
-                                 : 'bg-white border-2 border-gray-200 text-gray-500 hover:border-red-400 hover:text-red-600'
+                                ? 'bg-red-500 text-white shadow-sm ring-2 ring-red-200'
+                                : 'bg-white border-2 border-gray-200 text-gray-500 hover:border-red-400 hover:text-red-600'
                              }`}
                              title="Needs Improvement"
                            >
@@ -2368,6 +2448,12 @@ function SummaryTab({ classId, term, students, isESL }) {
   ]
 
   useEffect(() => { fetchAll() }, [classId, term])
+
+  useEffect(() => {
+    const handler = () => fetchAll()
+    document.addEventListener('gradebook-summary-refresh', handler)
+    return () => document.removeEventListener('gradebook-summary-refresh', handler)
+  }, [classId, term])
 
   const fetchAll = async () => {
     setLoading(true)
@@ -2478,20 +2564,12 @@ function SummaryTab({ classId, term, students, isESL }) {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <p className="text-sm text-gray-500">
-          Auto-calculated with renormalized weighting for missing components. Attainment = Participation (20%) + Assignments (80%). Total = Attainment (75%) + Progress Test (25%).
-        </p>
-        <button onClick={fetchAll} className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">
-          ↻ Refresh
-        </button>
-      </div>
       {loading ? (
         <div className="text-center text-gray-400 py-10">Calculating...</div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+        <div className={V2_TABLE_WRAP_CLASS}>
           <table className="w-full text-sm border-collapse">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className={V2_TABLE_HEAD_CLASS}>
             <tr>
               <th className={STUDENT_AVATAR_COL_CLASS}></th>
               <th className={STUDENT_INFO_COL_CLASS}>Student Information</th>
@@ -2563,19 +2641,23 @@ function SummaryTab({ classId, term, students, isESL }) {
                       <span className="font-semibold text-gray-800">{letterGradeFromPercentage(d.total)}</span>
                     </td>
                     <td className="px-4 py-3 text-center bg-gray-50 border-l border-gray-200">
-                      <span className={`text-xs font-medium ${
+                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
                         d.calcStatus === 'Complete'
-                          ? 'text-green-700'
+                          ? 'text-green-700 bg-green-100 border border-green-200'
                           : d.calcStatus === 'Partial'
-                            ? 'text-amber-700'
-                            : 'text-gray-400'
+                            ? 'text-amber-700 bg-amber-100 border border-amber-200'
+                            : 'text-slate-500 bg-slate-100 border border-slate-200'
                       }`}>
                         {d.calcStatus || 'Missing'}
                       </span>
                     </td>
                     {isFinalTerm ? (
                       <td className="px-3 py-3 text-center bg-gray-50 border-l border-gray-200">
-                        <span className="text-xs text-gray-600">
+                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
+                          String(finalCommentsByStudent[student.id] || '').trim()
+                            ? 'text-green-700 bg-green-100 border-green-200'
+                            : 'text-rose-700 bg-rose-100 border-rose-200'
+                        }`}>
                           {String(finalCommentsByStudent[student.id] || '').trim() ? 'Completed' : 'Required'}
                         </span>
                       </td>
@@ -2662,14 +2744,13 @@ function CommentsTab({ classId, term, students, onDirtyChange }) {
     <div>
       <div className="flex justify-between items-center mb-4">
         <p className="text-sm text-gray-500">
-          Write end of term comments for each student. Click box to expand.
-          <span className="ml-2 text-amber-700 font-medium">Missing: {missingCount}</span>
+          <span className="text-amber-700 font-medium">Missing: {missingCount}</span>
         </p>
         {saved && <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 font-medium">✓ Saved</span>}
       </div>
-      <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+      <div className={V2_TABLE_WRAP_CLASS}>
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className={V2_TABLE_HEAD_CLASS}>
             <tr>
               <th className={STUDENT_AVATAR_COL_CLASS}></th>
               <th className={STUDENT_INFO_COL_CLASS}>Student Information</th>
@@ -2679,7 +2760,7 @@ function CommentsTab({ classId, term, students, onDirtyChange }) {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {students.map(student => (
-              <tr key={student.id} className="hover:bg-gray-50 min-h-[56px]">
+              <tr key={student.id} className={V2_ROW_CLASS}>
                 <td className={STUDENT_AVATAR_CELL_CLASS}>
                   <ProfileAvatar 
                     avatarUrl={student.avatar_url} 
