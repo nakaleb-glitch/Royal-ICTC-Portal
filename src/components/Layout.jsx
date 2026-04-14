@@ -211,7 +211,6 @@ export default function Layout({ children }) {
 
     const { error: authError } = await supabase.auth.updateUser({
       password: newPassword,
-      data: { force_password_change: false },
     })
     if (authError) {
       setPasswordError(authError.message)
