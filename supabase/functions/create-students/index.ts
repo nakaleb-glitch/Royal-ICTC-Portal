@@ -11,7 +11,7 @@ const makeStudentEmail = (studentId: string) => {
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]/g, '')
-  return `${base || 'student'}@students.royal.edu.vn`
+  return `${base || 'student'}@royal.edu.vn`
 }
 
 const findAuthUserIdByEmail = async (supabaseAdmin: ReturnType<typeof createClient>, email: string) => {
