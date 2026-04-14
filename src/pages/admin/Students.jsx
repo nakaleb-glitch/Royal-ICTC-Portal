@@ -4,10 +4,12 @@ import Layout from '../../components/Layout'
 import ProfileAvatar from '../../components/ProfileAvatar'
 import Papa from 'papaparse'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../contexts/AuthContext'
 
 export default function Students() {
   const ACADEMIC_YEAR = '2026-2027'
   const navigate = useNavigate()
+  const { effectiveRole } = useAuth()
   const [students, setStudents] = useState([])
   const [loading, setLoading] = useState(true)
   const [importing, setImporting] = useState(false)
@@ -17,7 +19,11 @@ export default function Students() {
   const [search, setSearch] = useState('')
   const [message, setMessage] = useState(null)
   const [messageDetailOpen, setMessageDetailOpen] = useState(false)
+  const [importCredentials, setImportCredentials] = useState([])
   const [confirmReset, setConfirmReset] = useState(null)
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deletingAll, setDeletingAll] = useState(false)
   const [classesMeta, setClassesMeta] = useState([])
   const [rowEditingId, setRowEditingId] = useState(null)
   const [rowEditForm, setRowEditForm] = useState({
@@ -49,6 +55,7 @@ export default function Students() {
     'S0002,Tran Thi B,Bella Tran,7A1,lower_secondary,integrated',
   ].join('\n')
   const studentsCsvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(studentsCsvTemplate)}`
+  const isAdmin = effectiveRole === 'admin'
 
   const getValidAccessToken = async () => {
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
@@ -71,6 +78,32 @@ export default function Students() {
   }
 
   const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+  const downloadCredentialsCsv = () => {
+    if (importCredentials.length === 0) return
+    const rows = [
+      ['Student ID', 'English Name', 'Class', 'Temporary Password'],
+      ...importCredentials.map((entry) => [
+        entry.student_id || '',
+        entry.name_eng || '',
+        entry.class || '',
+        entry.temporary_password || '',
+      ]),
+    ]
+    const csvContent = rows
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', 'student_temporary_credentials.csv')
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    setImportCredentials([])
+  }
 
   const invokeCreateStudentsWithRetry = async (payloadChunk, token, attempt = 1) => {
     const { data, error } = await supabase.functions.invoke('create-students', {
@@ -109,7 +142,7 @@ export default function Students() {
     let synced = 0
     let failed = 0
     const errors = []
-    const temporaryPasswords = []
+    const credentialRows = []
     let offset = 0
 
     for (const chunk of chunks) {
@@ -126,14 +159,22 @@ export default function Students() {
           errors.push(`row ${absoluteRow}: ${e.error}`)
         })
         ;(data?.results || [])
-          .map((r) => r.temporary_password)
-          .filter(Boolean)
-          .forEach((p) => temporaryPasswords.push(p))
+          .filter((r) => r.temporary_password)
+          .forEach((r) => {
+            const localRow = Number(r.row || 0)
+            const source = localRow > 0 ? chunk[localRow - 1] : null
+            credentialRows.push({
+              student_id: r.student_id,
+              name_eng: source?.full_name || '',
+              class: '',
+              temporary_password: r.temporary_password,
+            })
+          })
       }
       offset += chunk.length
     }
 
-    return { synced, failed, errors, temporaryPasswords }
+    return { synced, failed, errors, credentialRows }
   }
 
   const getHomeroom = (classValue) => String(classValue || '').trim().split(/\s+/)[0] || ''
@@ -280,6 +321,7 @@ export default function Students() {
     const file = e.target.files[0]
     if (!file) return
     setImporting(true)
+    setImportCredentials([])
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
@@ -303,6 +345,15 @@ export default function Students() {
         } else {
           const enrollmentResult = await syncStudentEnrollments(upsertedRows || [])
           const syncResult = await syncStudentLogins(upsertedRows || [])
+          const credentialRows = (syncResult.credentialRows || []).map((entry) => {
+            const student = (upsertedRows || []).find((s) => String(s.student_id || '').toLowerCase() === String(entry.student_id || '').toLowerCase())
+            return {
+              ...entry,
+              class: student?.class || entry.class || '',
+              name_eng: student?.name_eng || entry.name_eng || '',
+            }
+          })
+          setImportCredentials(credentialRows)
           const summary = `${rows.length} students imported. Enrolled: ${enrollmentResult.enrolled}, Missing class match: ${enrollmentResult.missing}. Student logins: ${syncResult.synced} synced, ${syncResult.failed} failed.`
           const detailParts = []
           if (enrollmentResult.missingStudents.length > 0) {
@@ -367,7 +418,7 @@ export default function Students() {
         detail: `No class match for: ${enrollmentResult.missingStudents.join(', ')}`,
       })
     } else {
-      const tempPassword = syncResult?.temporaryPasswords?.[0]
+      const tempPassword = syncResult?.credentialRows?.[0]?.temporary_password
       setMessage({
         type: 'success',
         text: tempPassword
@@ -435,6 +486,56 @@ export default function Students() {
         : `Password reset for ${student.student_id}.`,
     })
     setConfirmReset(null)
+    fetchStudents()
+  }
+
+  const deleteAllStudents = async () => {
+    if (deleteConfirmText !== 'DELETE ALL STUDENTS') return
+    const token = await getValidAccessToken()
+    if (!token) {
+      setMessage({ type: 'error', text: 'Your session expired. Please sign out and sign in again as admin.' })
+      return
+    }
+
+    setDeletingAll(true)
+    const { data, error } = await supabase.functions.invoke('delete-all-students', {
+      body: {},
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+      },
+    })
+
+    if (error) {
+      setMessage({ type: 'error', text: `Delete all students failed: ${error.message}` })
+      setDeletingAll(false)
+      return
+    }
+
+    const deletedCounts = data?.deleted_counts || {}
+    const deletedSummary = Object.entries(deletedCounts)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join(', ')
+    const authDeleted = data?.auth_deleted || 0
+    const issueDetails = [
+      ...(data?.errors || []),
+      ...(data?.auth_errors || []),
+    ]
+
+    setMessage({
+      type: issueDetails.length > 0 ? 'error' : 'success',
+      text: issueDetails.length > 0
+        ? `Student wipe completed with warnings. Auth deleted: ${authDeleted}.`
+        : `All students deleted successfully. Auth deleted: ${authDeleted}.`,
+      detail: `Deleted counts: ${deletedSummary || 'none'}` + (issueDetails.length > 0 ? ` | Issues: ${issueDetails.join(' | ')}` : ''),
+    })
+
+    setDeletingAll(false)
+    setConfirmDeleteAll(false)
+    setDeleteConfirmText('')
+    setImportCredentials([])
+    setConfirmReset(null)
+    setMessageDetailOpen(false)
     fetchStudents()
   }
 
@@ -630,6 +731,18 @@ export default function Students() {
               Download CSV Template
             </a>
           </div>
+          {isAdmin && (
+            <button
+              onClick={() => {
+                setConfirmDeleteAll(true)
+                setDeleteConfirmText('')
+              }}
+              className="w-44 px-4 py-2 text-white rounded-lg text-sm font-medium text-center"
+              style={{ backgroundColor: '#d1232a' }}
+            >
+              Delete All Students
+            </button>
+          )}
         </div>
       </div>
 
@@ -648,7 +761,43 @@ export default function Students() {
               Click for more
             </button>
           )}
-          <button onClick={() => setMessage(null)} className="ml-4 opacity-50 hover:opacity-100">✕</button>
+          <button
+            onClick={() => {
+              setMessage(null)
+              setImportCredentials([])
+            }}
+            className="ml-4 opacity-50 hover:opacity-100"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {importCredentials.length > 0 && (
+        <div className="mb-6 px-4 py-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 text-sm">
+          <div className="flex items-center justify-between gap-2">
+            <p className="font-medium">
+              Temporary credentials are shown once for newly created students. Download and share securely.
+            </p>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border border-amber-300 bg-white">
+              {importCredentials.length} credentials ready
+            </span>
+          </div>
+          <div className="mt-2 flex gap-2">
+            <button
+              onClick={downloadCredentialsCsv}
+              className="px-3 py-1.5 rounded-lg text-white text-xs font-medium"
+              style={{ backgroundColor: '#1f86c7' }}
+            >
+              Download Credentials CSV
+            </button>
+            <button
+              onClick={() => setImportCredentials([])}
+              className="px-3 py-1.5 rounded-lg border border-amber-300 text-amber-800 text-xs font-medium"
+            >
+              Clear
+            </button>
+          </div>
         </div>
       )}
 
@@ -686,6 +835,43 @@ export default function Students() {
             </button>
             <button
               onClick={() => setConfirmReset(null)}
+              className="px-4 py-1.5 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {confirmDeleteAll && (
+        <div className="mb-6 px-4 py-4 rounded-lg bg-red-50 border border-red-200">
+          <p className="text-sm font-semibold text-red-700 mb-2">
+            This will permanently delete all students, related student records, and linked auth accounts.
+          </p>
+          <p className="text-xs text-red-700 mb-3">
+            Type <strong>DELETE ALL STUDENTS</strong> to confirm.
+          </p>
+          <input
+            type="text"
+            value={deleteConfirmText}
+            onChange={(e) => setDeleteConfirmText(e.target.value)}
+            className="w-full max-w-md border border-red-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+            placeholder="DELETE ALL STUDENTS"
+          />
+          <div className="mt-3 flex gap-2">
+            <button
+              onClick={deleteAllStudents}
+              disabled={deletingAll || deleteConfirmText !== 'DELETE ALL STUDENTS'}
+              className="px-4 py-1.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-60"
+            >
+              {deletingAll ? 'Deleting...' : 'Confirm Delete All'}
+            </button>
+            <button
+              onClick={() => {
+                setConfirmDeleteAll(false)
+                setDeleteConfirmText('')
+              }}
+              disabled={deletingAll}
               className="px-4 py-1.5 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-gray-50"
             >
               Cancel

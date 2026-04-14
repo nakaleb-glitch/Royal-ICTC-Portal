@@ -27,3 +27,9 @@ enabled = true
 verify_jwt = true
 import_map = "./functions/create-students/deno.json"
 entrypoint = "./functions/create-students/index.ts"
+
+[functions.delete-all-students]
+enabled = true
+verify_jwt = true
+import_map = "./functions/delete-all-students/deno.json"
+entrypoint = "./functions/delete-all-students/index.ts"
