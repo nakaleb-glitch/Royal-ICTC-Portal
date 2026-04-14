@@ -101,8 +101,6 @@ serve(async (req) => {
       if (!full_name) missing.push('full_name')
       if (!staff_id) missing.push('staff_id')
       if (!email) missing.push('email')
-      if (!level) missing.push('level')
-      if (!subject) missing.push('subject')
 
       if (missing.length > 0) {
         errors.push({
@@ -121,7 +119,7 @@ serve(async (req) => {
         user_metadata: {
           full_name,
           staff_id,
-          force_password_change: true
+          force_password_change: true,
         }
       })
 
@@ -137,8 +135,8 @@ serve(async (req) => {
             full_name,
             staff_id,
             role: role === 'admin' ? 'admin' : role === 'admin_teacher' ? 'admin_teacher' : 'teacher',
-            level,
-            subject,
+            level: level || null,
+            subject: subject || null,
             must_change_password: true
           }, { onConflict: 'id' })
 

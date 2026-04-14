@@ -74,7 +74,7 @@ serve(async (req) => {
       .eq('id', callerData.user.id)
       .single()
 
-    if (callerProfile?.role !== 'admin') {
+    if (callerProfile?.role !== 'admin' && callerProfile?.role !== 'admin_teacher') {
       return new Response(JSON.stringify({ error: 'Only admins can create student accounts' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -167,22 +167,11 @@ serve(async (req) => {
        if (upsertError) {
          errors.push({ row: i + 1, student_id, error: 'Profile upsert failed: ' + upsertError.message })
        } else {
-         // Account is successfully created - mark as success immediately
-         results.push({ row: i + 1, student_id, success: true })
-         
-         // Attempt password reset (non-critical, don't fail the whole import)
-         try {
-           await supabaseAdmin.auth.admin.updateUserById(userId, {
-             password: 'royal@123',
-             user_metadata: {
-               full_name,
-               student_id,
-               force_password_change: true,
-             },
-           })
-         } catch (resetError) {
-           // Silently ignore reset errors - account still works perfectly fine
-         }
+         results.push({
+           row: i + 1,
+           student_id,
+           success: true
+         })
        }
     }
 

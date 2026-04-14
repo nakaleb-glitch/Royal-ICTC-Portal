@@ -4,10 +4,12 @@ import Layout from '../../components/Layout'
 import ProfileAvatar from '../../components/ProfileAvatar'
 import Papa from 'papaparse'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../contexts/AuthContext'
 
 export default function Students() {
   const ACADEMIC_YEAR = '2026-2027'
   const navigate = useNavigate()
+  const { effectiveRole } = useAuth()
   const [students, setStudents] = useState([])
   const [loading, setLoading] = useState(true)
   const [importing, setImporting] = useState(false)
@@ -18,6 +20,9 @@ export default function Students() {
   const [message, setMessage] = useState(null)
   const [messageDetailOpen, setMessageDetailOpen] = useState(false)
   const [confirmReset, setConfirmReset] = useState(null)
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deletingAll, setDeletingAll] = useState(false)
   const [classesMeta, setClassesMeta] = useState([])
   const [rowEditingId, setRowEditingId] = useState(null)
   const [rowEditForm, setRowEditForm] = useState({
@@ -49,6 +54,7 @@ export default function Students() {
     'S0002,Tran Thi B,Bella Tran,7A1,lower_secondary,integrated',
   ].join('\n')
   const studentsCsvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(studentsCsvTemplate)}`
+  const isAdmin = effectiveRole === 'admin'
 
   const getValidAccessToken = async () => {
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
@@ -90,12 +96,12 @@ export default function Students() {
 
   const syncStudentLogins = async (studentRows) => {
     if (!Array.isArray(studentRows) || studentRows.length === 0) {
-      return { synced: 0, failed: 0, errors: [] }
+      return { synced: 0, failed: 0, errors: [], temporaryPasswords: [] }
     }
 
     const token = await getValidAccessToken()
     if (!token) {
-      return { synced: 0, failed: studentRows.length, errors: ['Session expired. Please sign in again as admin.'] }
+      return { synced: 0, failed: studentRows.length, errors: ['Session expired. Please sign in again as admin.'], temporaryPasswords: [] }
     }
 
     const payload = studentRows.map((s) => ({
@@ -397,7 +403,7 @@ export default function Students() {
       return
     }
 
-    const { error } = await supabase.functions.invoke('reset-user-password', {
+    const { data, error } = await supabase.functions.invoke('reset-user-password', {
       body: { user_id: targetUser.id },
       headers: {
         Authorization: `Bearer ${token}`,
@@ -418,6 +424,56 @@ export default function Students() {
 
     setMessage({ type: 'success', text: `Password reset for ${student.student_id}. Default password is royal@123.` })
     setConfirmReset(null)
+    fetchStudents()
+  }
+
+  const deleteAllStudents = async () => {
+    if (deleteConfirmText !== 'DELETE ALL STUDENTS') return
+    const token = await getValidAccessToken()
+    if (!token) {
+      setMessage({ type: 'error', text: 'Your session expired. Please sign out and sign in again as admin.' })
+      return
+    }
+
+    setDeletingAll(true)
+    const { data, error } = await supabase.functions.invoke('delete-all-students', {
+      body: {},
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+      },
+    })
+
+    if (error) {
+      setMessage({ type: 'error', text: `Delete all students failed: ${error.message}` })
+      setDeletingAll(false)
+      return
+    }
+
+    const deletedCounts = data?.deleted_counts || {}
+    const deletedSummary = Object.entries(deletedCounts)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join(', ')
+    const authDeleted = data?.auth_deleted || 0
+    const issueDetails = [
+      ...(data?.errors || []),
+      ...(data?.auth_errors || []),
+    ]
+
+    setMessage({
+      type: issueDetails.length > 0 ? 'error' : 'success',
+      text: issueDetails.length > 0
+        ? `Student wipe completed with warnings. Auth deleted: ${authDeleted}.`
+        : `All students deleted successfully. Auth deleted: ${authDeleted}.`,
+      detail: `Deleted counts: ${deletedSummary || 'none'}` + (issueDetails.length > 0 ? ` | Issues: ${issueDetails.join(' | ')}` : ''),
+    })
+
+    setDeletingAll(false)
+    setConfirmDeleteAll(false)
+    setDeleteConfirmText('')
+    setImportCredentials([])
+    setConfirmReset(null)
+    setMessageDetailOpen(false)
     fetchStudents()
   }
 
@@ -613,6 +669,18 @@ export default function Students() {
               Download CSV Template
             </a>
           </div>
+          {isAdmin && (
+            <button
+              onClick={() => {
+                setConfirmDeleteAll(true)
+                setDeleteConfirmText('')
+              }}
+              className="w-44 px-4 py-2 text-white rounded-lg text-sm font-medium text-center"
+              style={{ backgroundColor: '#d1232a' }}
+            >
+              Delete All Students
+            </button>
+          )}
         </div>
       </div>
 
@@ -631,7 +699,14 @@ export default function Students() {
               Click for more
             </button>
           )}
-          <button onClick={() => setMessage(null)} className="ml-4 opacity-50 hover:opacity-100">✕</button>
+          <button
+            onClick={() => {
+              setMessage(null)
+            }}
+            className="ml-4 opacity-50 hover:opacity-100"
+          >
+            ✕
+          </button>
         </div>
       )}
 
@@ -658,7 +733,7 @@ export default function Students() {
       {confirmReset && (
         <div className="mb-6 px-4 py-4 rounded-lg bg-red-50 border border-red-200">
           <p className="text-sm font-medium text-red-700 mb-3">
-            Reset password for <strong>{confirmReset.name_eng || confirmReset.student_id}</strong>? Their password will be set to <strong>royal@123</strong> and they will be required to change it on next login.
+            Reset password for <strong>{confirmReset.name_eng || confirmReset.student_id}</strong>? A one-time temporary password will be generated and they will be required to change it on next login.
           </p>
           <div className="flex gap-2">
             <button
@@ -669,6 +744,43 @@ export default function Students() {
             </button>
             <button
               onClick={() => setConfirmReset(null)}
+              className="px-4 py-1.5 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {confirmDeleteAll && (
+        <div className="mb-6 px-4 py-4 rounded-lg bg-red-50 border border-red-200">
+          <p className="text-sm font-semibold text-red-700 mb-2">
+            This will permanently delete all students, related student records, and linked auth accounts.
+          </p>
+          <p className="text-xs text-red-700 mb-3">
+            Type <strong>DELETE ALL STUDENTS</strong> to confirm.
+          </p>
+          <input
+            type="text"
+            value={deleteConfirmText}
+            onChange={(e) => setDeleteConfirmText(e.target.value)}
+            className="w-full max-w-md border border-red-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+            placeholder="DELETE ALL STUDENTS"
+          />
+          <div className="mt-3 flex gap-2">
+            <button
+              onClick={deleteAllStudents}
+              disabled={deletingAll || deleteConfirmText !== 'DELETE ALL STUDENTS'}
+              className="px-4 py-1.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-60"
+            >
+              {deletingAll ? 'Deleting...' : 'Confirm Delete All'}
+            </button>
+            <button
+              onClick={() => {
+                setConfirmDeleteAll(false)
+                setDeleteConfirmText('')
+              }}
+              disabled={deletingAll}
               className="px-4 py-1.5 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-gray-50"
             >
               Cancel
