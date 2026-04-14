@@ -11,10 +11,10 @@ as $$
 DECLARE
   user_email text;
 BEGIN
-  -- First try staff_id lookup
+  -- First try uid lookup
   SELECT email INTO user_email
   FROM public.users u
-  WHERE lower(u.staff_id) = lower(trim(p_staff_id))
+  WHERE lower(u.uid) = lower(trim(p_staff_id))
   LIMIT 1;
 
   IF user_email IS NOT NULL THEN

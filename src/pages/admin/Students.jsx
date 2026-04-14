@@ -157,15 +157,15 @@ export default function Students() {
     })
 
     const studentIds = studentRows.map((s) => s.id).filter(Boolean)
-    if (studentIds.length > 0 && classIds.length > 0) {
-      await supabase
-        .from('class_students')
-        .delete()
-        .in('student_id', studentIds)
-        .in('class_id', classIds)
-    }
- store
-    const enrollRows = []
+     if (studentIds.length > 0 && classIds.length > 0) {
+       await supabase
+         .from('class_students')
+         .delete()
+         .in('student_id', studentIds)
+         .in('class_id', classIds)
+     }
+
+     const enrollRows = []
     const missingStudents = []
     studentRows.forEach((student) => {
       const homeroom = getHomeroom(student.class).toLowerCase()

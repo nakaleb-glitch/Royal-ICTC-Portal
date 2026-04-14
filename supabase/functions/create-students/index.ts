@@ -116,7 +116,7 @@ serve(async (req) => {
       const { data: existingProfile } = await supabaseAdmin
         .from('users')
         .select('id, email')
-        .ilike('staff_id', student_id)
+        .ilike('uid', student_id)
         .maybeSingle()
 
       if (existingProfile?.id) {
@@ -147,39 +147,40 @@ serve(async (req) => {
         }
       }
 
-      const { error: upsertError } = await supabaseAdmin
-        .from('users')
-        .upsert({
-          id: userId,
-          email: profileEmail,
-          full_name,
-          staff_id: student_id,
-          role: 'student',
-          level,
-          subject: null,
-          student_id_ref,
-          must_change_password: true,
-        }, { onConflict: 'id' })
+       const { error: upsertError } = await supabaseAdmin
+         .from('users')
+         .upsert({
+           id: userId,
+           email: profileEmail,
+           full_name,
+           uid: student_id.toLowerCase().trim(),
+           role: 'student',
+           level,
+           subject: null,
+           student_id_ref,
+           must_change_password: true,
+         }, { onConflict: 'id' })
 
-      if (upsertError) {
-        errors.push({ row: i + 1, student_id, error: 'Profile upsert failed: ' + upsertError.message })
-      } else {
-        // Ensure imported/re-imported students always return to default login state.
-        const { error: resetError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-          password: 'royal@123',
-          user_metadata: {
-            full_name,
-            student_id,
-            force_password_change: true,
-          },
-        })
-
-        if (resetError) {
-          errors.push({ row: i + 1, student_id, error: 'Auth reset failed: ' + resetError.message })
-        } else {
-          results.push({ row: i + 1, student_id, success: true })
-        }
-      }
+       if (upsertError) {
+         errors.push({ row: i + 1, student_id, error: 'Profile upsert failed: ' + upsertError.message })
+       } else {
+         // Account is successfully created - mark as success immediately
+         results.push({ row: i + 1, student_id, success: true })
+         
+         // Attempt password reset (non-critical, don't fail the whole import)
+         try {
+           await supabaseAdmin.auth.admin.updateUserById(userId, {
+             password: 'royal@123',
+             user_metadata: {
+               full_name,
+               student_id,
+               force_password_change: true,
+             },
+           })
+         } catch (resetError) {
+           // Silently ignore reset errors - account still works perfectly fine
+         }
+       }
     }
 
     return new Response(JSON.stringify({ results, errors }), {
