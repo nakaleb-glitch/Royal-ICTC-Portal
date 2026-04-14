@@ -835,10 +835,10 @@ const letterGradeFromPercentage = (score) => {
   return 'E'
 }
 
-const STUDENT_AVATAR_COL_CLASS = 'text-left px-3 py-3 text-slate-600 font-semibold sticky left-0 z-20 bg-slate-100/95 w-[76px] min-w-[76px] border-r border-slate-200'
-const STUDENT_INFO_COL_CLASS = 'text-left px-4 py-3 text-slate-700 font-semibold sticky left-[76px] z-20 bg-slate-100/95 w-[320px] min-w-[320px] border-r border-slate-200'
+const STUDENT_AVATAR_COL_CLASS = 'text-left px-3 py-3 text-slate-600 font-semibold sticky left-0 z-20 bg-slate-100/95 w-[64px] min-w-[64px] border-r border-slate-200'
+const STUDENT_INFO_COL_CLASS = 'text-left px-4 py-3 text-slate-700 font-semibold sticky left-[64px] z-20 bg-slate-100/95 w-[240px] min-w-[240px] border-r border-slate-200'
 const STUDENT_AVATAR_CELL_CLASS = 'px-3 py-3 sticky left-0 z-10 bg-white/95 backdrop-blur-sm border-r border-slate-100'
-const STUDENT_INFO_CELL_CLASS = 'px-4 py-3 sticky left-[76px] z-10 bg-white/95 backdrop-blur-sm border-r border-slate-100'
+const STUDENT_INFO_CELL_CLASS = 'px-4 py-3 sticky left-[64px] z-10 bg-white/95 backdrop-blur-sm border-r border-slate-100'
 const V2_TABLE_WRAP_CLASS = 'bg-white rounded-2xl border border-slate-200 shadow-sm overflow-x-auto'
 const V2_TABLE_HEAD_CLASS = 'bg-slate-100/80 border-b border-slate-200'
 const V2_ROW_CLASS = 'hover:bg-sky-50/40 min-h-[58px]'
@@ -1868,7 +1868,8 @@ function ProgressTestTab({ classId, term, students, isESL, onDirtyChange }) {
         <table className="w-full text-sm">
           <thead className={V2_TABLE_HEAD_CLASS}>
             <tr>
-              <th colSpan={2} className="text-left px-4 py-3 text-gray-500 font-medium sticky left-0 bg-gray-50 w-[280px]">Student Information</th>
+              <th className={STUDENT_AVATAR_COL_CLASS}></th>
+              <th className={STUDENT_INFO_COL_CLASS}>Student Information</th>
               {isESL ? (
                 <>
               <th colSpan={3} className="text-center px-3 py-2 font-medium bg-gray-200 text-gray-800 border-l border-gray-300" style={{ backgroundClip: 'padding-box' }}>Progress Test - Scores</th>
@@ -1883,7 +1884,7 @@ function ProgressTestTab({ classId, term, students, isESL, onDirtyChange }) {
             </tr>
             <tr>
               <th className={STUDENT_AVATAR_COL_CLASS}></th>
-              <th className={STUDENT_INFO_COL_CLASS}></th>
+              <th className={STUDENT_INFO_COL_CLASS}>Student Information</th>
               {isESL ? (
                 <>
               <th className="text-center px-3 py-3 font-medium min-w-36 bg-gray-200 text-gray-700 border-l border-gray-200">Reading & Writing</th>
