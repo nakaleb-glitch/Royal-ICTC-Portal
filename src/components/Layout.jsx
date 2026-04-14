@@ -382,7 +382,7 @@ export default function Layout({ children }) {
                     </>
                   ) : null}
                 </div>
-                 <div className="text-xs text-gray-400">{idLabel}: {profile?.uid || profile?.staff_id || '—'}</div>
+                 <div className="text-xs text-gray-400">{idLabel}: {(profile?.uid || profile?.staff_id || '—').toUpperCase()}</div>
               </div>
               <div className="flex flex-col items-center gap-1">
                 <span className="text-xs px-2 py-1 rounded-full font-medium"
