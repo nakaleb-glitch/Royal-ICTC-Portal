@@ -854,12 +854,13 @@ const letterGradeFromPercentage = (score) => {
   return 'E'
 }
 
-const STUDENT_AVATAR_COL_CLASS = 'text-left px-3 py-3 text-slate-600 font-semibold sticky left-0 z-20 bg-slate-100/95 w-[64px] min-w-[64px] border-r border-slate-200'
-const STUDENT_INFO_COL_CLASS = 'text-left px-4 py-3 text-slate-700 font-semibold sticky left-[64px] z-20 bg-slate-100/95 w-[240px] min-w-[240px] border-r border-slate-200'
-const STUDENT_AVATAR_CELL_CLASS = 'px-3 py-3 sticky left-0 z-10 bg-white/95 backdrop-blur-sm border-r border-slate-100'
-const STUDENT_INFO_CELL_CLASS = 'px-4 py-3 sticky left-[64px] z-10 bg-white/95 backdrop-blur-sm border-r border-slate-100'
-const V2_TABLE_WRAP_CLASS = 'bg-white rounded-2xl border border-slate-200 shadow-sm overflow-x-auto'
-const V2_TABLE_HEAD_CLASS = 'bg-slate-100/80 border-b border-slate-200'
+const STUDENT_AVATAR_COL_CLASS = 'text-left px-3 py-3 text-slate-600 font-semibold sticky left-0 z-20 bg-slate-100/95 w-[64px] min-w-[64px] border-r border-slate-300'
+const STUDENT_INFO_COL_CLASS = 'text-left px-4 py-3 text-slate-700 font-semibold sticky left-[64px] z-20 bg-slate-100/95 w-[240px] min-w-[240px] border-r border-slate-300'
+const STUDENT_AVATAR_CELL_CLASS = 'px-3 py-3 sticky left-0 z-10 bg-white/95 backdrop-blur-sm border-r border-slate-300'
+const STUDENT_INFO_CELL_CLASS = 'px-4 py-3 sticky left-[64px] z-10 bg-white/95 backdrop-blur-sm border-r border-slate-300'
+const V2_TABLE_WRAP_CLASS = 'gradebook-grid bg-white rounded-2xl border border-slate-300 shadow-sm overflow-x-auto'
+const V2_TABLE_HEAD_CLASS = 'bg-slate-100/80'
+const V2_TABLE_BODY_CLASS = 'gradebook-grid-body'
 const V2_ROW_CLASS = 'hover:bg-sky-50/40 min-h-[58px]'
 const V2_PRIMARY_BTN = 'px-4 py-2 text-sm font-semibold text-white rounded-xl bg-sky-600 hover:bg-sky-700 disabled:bg-slate-300 disabled:text-slate-500 transition-colors'
 
@@ -1284,7 +1285,7 @@ function ParticipationTab({ classId, term, students, onDirtyChange }) {
               <th className="text-center px-4 py-3 font-medium min-w-20 bg-green-100 text-green-800 border-l border-gray-200">Participation - Overall</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className={V2_TABLE_BODY_CLASS}>
             {students.map(student => (
               <tr key={student.id} className={V2_ROW_CLASS}>
                 <td className={STUDENT_AVATAR_CELL_CLASS}>
@@ -1604,7 +1605,7 @@ function AssignmentsTab({ classId, term, students, onDirtyChange }) {
                 <th className="text-center px-4 py-3 font-medium min-w-24 bg-green-100 text-green-800 border-l border-gray-200">Assignments - Overall</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className={V2_TABLE_BODY_CLASS}>
               {students.map(student => (
                 <tr key={student.id} className={V2_ROW_CLASS}>
                   <td className={STUDENT_AVATAR_CELL_CLASS}>
@@ -1976,7 +1977,7 @@ function ProgressTestTab({ classId, term, students, isESL, onDirtyChange }) {
               )}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className={V2_TABLE_BODY_CLASS}>
             {students.map(student => {
               const g = grades[student.id] || {}
               const overall = getOverall(student.id)
@@ -2349,7 +2350,7 @@ function StudentAttributesTab({ classId, term, students, onDirtyChange }) {
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className={V2_TABLE_BODY_CLASS}>
             {students.map((student) => {
               const row = attributes[student.id] || {}
               return (
@@ -2600,7 +2601,7 @@ function SummaryTab({ classId, term, students, isESL }) {
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className={V2_TABLE_BODY_CLASS}>
               {students.map(student => {
                 const d = data[student.id] || {}
                 const attrs = attributes[student.id] || {}
@@ -2756,7 +2757,7 @@ function CommentsTab({ classId, term, students, onDirtyChange }) {
               <th className="text-center px-4 py-3 text-gray-500 font-medium w-28 min-w-28">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className={V2_TABLE_BODY_CLASS}>
             {students.map(student => (
               <tr key={student.id} className={V2_ROW_CLASS}>
                 <td className={STUDENT_AVATAR_CELL_CLASS}>

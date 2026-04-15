@@ -15,3 +15,29 @@ table td {
   position: relative;
   z-index: 1;
 }
+
+/* Ensure gradebook rows/columns always stay visually separated */
+.gradebook-grid table {
+  border-collapse: collapse !important;
+}
+
+.gradebook-grid th,
+.gradebook-grid td {
+  border-right: 1px solid #cbd5e1 !important;
+  border-bottom: 1px solid #cbd5e1 !important;
+}
+
+.gradebook-grid th:last-child,
+.gradebook-grid td:last-child {
+  border-right: 0 !important;
+}
+
+.gradebook-grid .gradebook-grid-body tr:last-child td {
+  border-bottom: 0 !important;
+}
+
+.dark .gradebook-grid th,
+.dark .gradebook-grid td {
+  border-right-color: #475569 !important;
+  border-bottom-color: #475569 !important;
+}
