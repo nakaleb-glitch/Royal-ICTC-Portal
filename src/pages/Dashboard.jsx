@@ -1393,14 +1393,14 @@ export default function Dashboard() {
                                     Covering for {schedule.covered_teacher_name}
                                   </div>
                                 )}
-                                {schedule?.materials_link && (
+                                {schedule?.materials_link && schedule?.cover_status === 'covering' && (
                                   <a
                                     href={schedule.materials_link}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-[10px] text-blue-600 hover:underline break-all"
                                   >
-                                    Open materials
+                                    View Materials
                                   </a>
                                 )}
                                 {schedule?.cover_status === 'covered' && (
@@ -1410,7 +1410,7 @@ export default function Dashboard() {
                                     disabled={updatingCoverMaterials}
                                     className="mt-1 text-[10px] text-blue-700 hover:underline disabled:opacity-60"
                                   >
-                                    {updatingCoverMaterials ? 'Updating...' : 'Update materials link'}
+                                    {updatingCoverMaterials ? 'Updating...' : 'View / Update'}
                                   </button>
                                 )}
                               </div>
