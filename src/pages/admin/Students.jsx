@@ -143,60 +143,53 @@ export default function Students() {
     if (!Array.isArray(studentRows) || studentRows.length === 0) {
       return { enrolled: 0, missing: 0, missingStudents: [] }
     }
-
-    const { data: currentYearClasses, error: classError } = await supabase
-      .from('classes')
-      .select('id, name')
-      .eq('academic_year', ACADEMIC_YEAR)
-
-    if (classError) {
-      return { enrolled: 0, missing: studentRows.length, missingStudents: [`Class lookup failed: ${classError.message}`] }
-    }
-
-    const classIds = (currentYearClasses || []).map((c) => c.id)
-    const classesByHomeroom = {}
-    ;(currentYearClasses || []).forEach((cls) => {
-      const homeroom = getHomeroom(cls.name).toLowerCase()
-      if (!homeroom) return
-      if (!classesByHomeroom[homeroom]) classesByHomeroom[homeroom] = []
-      classesByHomeroom[homeroom].push(cls.id)
-    })
-
-    const studentIds = studentRows.map((s) => s.id).filter(Boolean)
-     if (studentIds.length > 0 && classIds.length > 0) {
-       await supabase
-         .from('class_students')
-         .delete()
-         .in('student_id', studentIds)
-         .in('class_id', classIds)
-     }
-
-     const enrollRows = []
-    const missingStudents = []
-    studentRows.forEach((student) => {
-      const homeroom = getHomeroom(student.class).toLowerCase()
-      const targetClassIds = classesByHomeroom[homeroom] || []
-      if (!homeroom || targetClassIds.length === 0) {
-        missingStudents.push(student.student_id || student.id)
-        return
-      }
-      targetClassIds.forEach((classId) => {
-        enrollRows.push({ class_id: classId, student_id: student.id })
-      })
-    })
-
-    if (enrollRows.length > 0) {
-      const { error: enrollError } = await supabase
-        .from('class_students')
-        .upsert(enrollRows, { onConflict: 'class_id,student_id' })
-
-      if (enrollError) {
-        return { enrolled: 0, missing: studentRows.length, missingStudents: [`Enrollment upsert failed: ${enrollError.message}`] }
+    const token = await getValidAccessToken()
+    if (!token) {
+      return {
+        enrolled: 0,
+        missing: studentRows.length,
+        missingStudents: ['Session expired. Please sign in again as admin.'],
       }
     }
 
-    const enrolledStudents = studentRows.length - missingStudents.length
-    return { enrolled: enrolledStudents, missing: missingStudents.length, missingStudents }
+    const payload = studentRows.map((s) => ({
+      id: s.id,
+      student_id: s.student_id,
+      class: s.class,
+    }))
+
+    const { data, error } = await supabase.functions.invoke('sync-student-enrollments', {
+      body: {
+        students: payload,
+        academic_year: ACADEMIC_YEAR,
+      },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+      },
+    })
+
+    if (error) {
+      return {
+        enrolled: 0,
+        missing: studentRows.length,
+        missingStudents: [`Enrollment sync failed: ${error.message}`],
+      }
+    }
+
+    if (data?.error) {
+      return {
+        enrolled: 0,
+        missing: studentRows.length,
+        missingStudents: [`Enrollment sync failed: ${data.error}`],
+      }
+    }
+
+    return {
+      enrolled: Number(data?.enrolled || 0),
+      missing: Number(data?.missing || 0),
+      missingStudents: Array.isArray(data?.missingStudents) ? data.missingStudents : [],
+    }
   }
 
   const capitalizeFirstAlpha = (value) => {
