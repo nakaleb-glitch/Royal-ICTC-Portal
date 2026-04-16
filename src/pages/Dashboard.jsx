@@ -1,7 +1,7 @@
 import { useAuth } from '../contexts/AuthContext'
 import { Link } from 'react-router-dom'
 import Layout from '../components/Layout'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { getCurrentWeekIndexWithOverride, getWeekIndexForDate } from '../lib/academicCalendar'
 import { normalizeLinkUrl, uploadTeacherAnnouncementPdf } from '../lib/announcementAttachments'
@@ -107,6 +107,24 @@ const getCurrentWeekIndex = () => {
   return getCurrentWeekIndexWithOverride(ALL_WEEKS.length)
 }
 
+const formatLocalDateInput = (date = new Date()) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const parseLocalDateInput = (value) => {
+  if (!value || typeof value !== 'string') return null
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return null
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  if (!year || !month || !day) return null
+  return new Date(year, month - 1, day)
+}
+
 export default function Dashboard() {
   const { profile, user, effectiveRole } = useAuth()
   const [classes, setClasses] = useState([])
@@ -149,36 +167,30 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [levelFilter, setLevelFilter] = useState('')
   const [gradeFilter, setGradeFilter] = useState('all')
-  const [debugWeekOverride, setDebugWeekOverride] = useState(() => {
-    const stored = sessionStorage.getItem('debug_week_override')
-    if (stored !== null) {
-      const idx = Number(stored)
-      if (idx >= 0 && idx < ALL_WEEKS.length) return idx
-    }
-    return getCurrentWeekIndex()
-  })
-  
-  const [debugDayOverride, setDebugDayOverride] = useState(() => {
-    const stored = sessionStorage.getItem('debug_day_override')
-    if (stored !== null) {
-      const idx = Number(stored)
-      if (idx >= 0 && idx < 7) return idx
-    }
-    return new Date().getDay() === 0 ? 6 : new Date().getDay() - 1
-  })
-  
   const [debugDateOverride, setDebugDateOverride] = useState(() => {
     const stored = sessionStorage.getItem('debug_date_override')
-    if (stored) return stored
-    return new Date().toISOString().slice(0, 10)
+    if (stored && parseLocalDateInput(stored)) return stored
+    return formatLocalDateInput(new Date())
   })
+  const activeDashboardDate = useMemo(
+    () => parseLocalDateInput(debugDateOverride) || new Date(),
+    [debugDateOverride]
+  )
+  const activeDayOverride = useMemo(() => {
+    const day = activeDashboardDate.getDay()
+    return day === 0 ? 6 : day - 1
+  }, [activeDashboardDate])
+  const activeWeekOverride = useMemo(
+    () => getWeekIndexForDate(activeDashboardDate),
+    [activeDashboardDate]
+  )
   const [showDebugControls, setShowDebugControls] = useState(false)
   const [teacherSchedule, setTeacherSchedule] = useState({})
   const [teacherLevel, setTeacherLevel] = useState('primary')
 
   useEffect(() => {
     if (profile) fetchDashboardData()
-  }, [profile, debugDateOverride, debugDayOverride])
+  }, [profile, debugDateOverride])
 
   const fetchDashboardData = async () => {
     setLoading(true)
@@ -396,8 +408,7 @@ export default function Dashboard() {
     }
 
     const currentWeek = getCurrentWeekIndex()
-    const derivedCoverWeek = getWeekIndexForDate(debugDateOverride ? new Date(debugDateOverride) : new Date())
-    const activeCoverWeek = Number.isFinite(derivedCoverWeek) ? derivedCoverWeek : debugWeekOverride
+    const activeCoverWeek = activeWeekOverride
     
     const [{ data: classData }, { count: submittedPlanCount }, { data: dashboardItems }, { data: teacherAnnouncementRows }, { data: submittedReports }] = await Promise.all([
       supabase.from('classes').select('*').eq('teacher_id', profile.id).order('name'),
@@ -1113,39 +1124,19 @@ export default function Dashboard() {
                             type="date"
                             value={debugDateOverride}
                             onChange={e => {
-                              const selectedDate = new Date(e.target.value)
-                              setDebugDateOverride(e.target.value)
-                              sessionStorage.setItem('debug_date_override', e.target.value)
-                              
-                              // Auto calculate day of week (0=Sunday -> 6=Saturday)
-                              const dayIdx = selectedDate.getDay() === 0 ? 6 : selectedDate.getDay() - 1
-                              setDebugDayOverride(dayIdx)
-                              sessionStorage.setItem('debug_day_override', String(dayIdx))
-
-                              // Auto calculate week number for this date
-                              const weekIndex = getWeekIndexForDate(selectedDate)
-                              if (weekIndex >= 0 && weekIndex < ALL_WEEKS.length) {
-                                setDebugWeekOverride(weekIndex)
-                                sessionStorage.setItem('debug_week_override', String(weekIndex))
-                              }
-                              
-                              fetchDashboardData()
+                              const nextValue = e.target.value
+                              setDebugDateOverride(nextValue)
+                              sessionStorage.setItem('debug_date_override', nextValue)
                             }}
                             className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
                           <button
                             onClick={() => {
                               // Clear all storage overrides
-                              sessionStorage.removeItem('debug_week_override')
-                              sessionStorage.removeItem('debug_day_override')
                               sessionStorage.removeItem('debug_date_override')
 
-                              // Reset all state variables to current defaults
-                              setDebugWeekOverride(getCurrentWeekIndex())
-                              setDebugDayOverride(new Date().getDay() === 0 ? 6 : new Date().getDay() - 1)
-                              setDebugDateOverride(new Date().toISOString().slice(0, 10))
-                              
-                              fetchDashboardData()
+                              // Reset dashboard date context to local today
+                              setDebugDateOverride(formatLocalDateInput(new Date()))
                             }}
                             className="px-3 py-2 rounded-lg bg-gray-200 text-gray-700 text-sm hover:bg-gray-300"
                           >
@@ -1156,10 +1147,10 @@ export default function Dashboard() {
                         {/* Auto calculated values display */}
                         <div className="mt-3 pl-1 space-y-1">
                           <div className="text-xs text-blue-600 font-medium">
-                            ▸ {ALL_WEEKS[debugWeekOverride]?.label || 'Week'} — {ALL_WEEKS[debugWeekOverride]?.range || ''}
+                            ▸ {ALL_WEEKS[activeWeekOverride]?.label || 'Week'} — {ALL_WEEKS[activeWeekOverride]?.range || ''}
                           </div>
                           <div className="text-xs text-blue-600 font-medium">
-                            ▸ {DAYS[debugDayOverride]}
+                            ▸ {DAYS[activeDayOverride]}
                           </div>
                         </div>
                       </div>
@@ -1313,7 +1304,7 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">My Schedule</h3>
-                      <p className="text-xs text-gray-500">{DAYS[debugDayOverride]}</p>
+                      <p className="text-xs text-gray-500">{DAYS[activeDayOverride]}</p>
                     </div>
                     <Link
                       to="/teacher-schedule"
@@ -1325,7 +1316,7 @@ export default function Dashboard() {
                   </div>
 
                   <div className="space-y-1">
-                    {debugDayOverride >= 5 ? (
+                    {activeDayOverride >= 5 ? (
                       <div className="py-12 text-center">
                         <div className="text-base font-medium text-gray-500">Weekend - No Classes</div>
                       </div>
@@ -1333,7 +1324,7 @@ export default function Dashboard() {
                       (teacherLevel === 'secondary' ? SECONDARY_TIMETABLE : PRIMARY_TIMETABLE)
                         .filter(row => row.type !== 'break')
                         .map((row, idx) => {
-                          const schedule = teacherSchedule[`${debugDayOverride}-${row.period}`]
+                          const schedule = teacherSchedule[`${activeDayOverride}-${row.period}`]
                           return (
                             <div key={idx} className="flex items-center gap-2 py-1 border-b border-gray-100 last:border-0">
                               <div className="w-[118px] shrink-0 leading-tight">
