@@ -40,7 +40,7 @@ const WEEK_OPTIONS = Array.from({ length: 40 }, (_, idx) => idx)
 
 export default function TeacherSchedule() {
   const navigate = useNavigate()
-  const { profile } = useAuth()
+  const { profile, effectiveRole } = useAuth()
   const [schedules, setSchedules] = useState({})
   const [teachers, setTeachers] = useState([])
   const [selectedTeacher, setSelectedTeacher] = useState(null)
@@ -49,12 +49,10 @@ export default function TeacherSchedule() {
 
   useEffect(() => {
     fetchTeachers()
-    
-    // Auto load logged in teacher's schedule if user is a teacher
-    if (profile && profile.role === 'teacher') {
+    if (profile && effectiveRole === 'teacher') {
       setSelectedTeacher(profile.id)
     }
-  }, [profile])
+  }, [profile, effectiveRole])
 
   useEffect(() => {
     if (selectedTeacher) {
@@ -180,7 +178,7 @@ export default function TeacherSchedule() {
             ← Go Back
           </button>
 
-          {profile?.role === 'admin' && (
+          {effectiveRole === 'admin' && (
             <button
               onClick={() => navigate('/admin/teacher-schedules')}
               className="text-white px-4 py-1.5 rounded-lg hover:opacity-90 transition-opacity text-sm font-medium"
@@ -192,10 +190,10 @@ export default function TeacherSchedule() {
         </div>
 
         <h2 className="text-2xl font-bold text-gray-900">
-          {profile?.role === 'teacher' ? 'My Schedule' : 'Teacher Schedule View'}
+          {effectiveRole === 'teacher' ? 'My Schedule' : 'Teacher Schedule View'}
         </h2>
         <p className="text-sm text-gray-500 mt-1">
-          {profile?.role === 'teacher' ? 'Your weekly teaching schedule.' : 'Select a teacher to view their full weekly timetable.'}
+          {effectiveRole === 'teacher' ? 'Your weekly teaching schedule.' : 'Select a teacher to view their full weekly timetable.'}
         </p>
         <div className="mt-3">
           <label className="block text-xs font-medium text-gray-500 mb-1">Week</label>
@@ -212,7 +210,7 @@ export default function TeacherSchedule() {
       </div>
 
         {/* Teacher Selector - Only show for admins */}
-        {profile?.role === 'admin' && (
+        {effectiveRole === 'admin' && (
           <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
             <div className="flex items-center gap-6">
               <div className="flex-1">
