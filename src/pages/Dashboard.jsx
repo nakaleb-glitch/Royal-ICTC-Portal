@@ -187,6 +187,7 @@ export default function Dashboard() {
   const [showDebugControls, setShowDebugControls] = useState(false)
   const [teacherSchedule, setTeacherSchedule] = useState({})
   const [teacherLevel, setTeacherLevel] = useState('primary')
+  const [updatingCoverMaterials, setUpdatingCoverMaterials] = useState(false)
 
   useEffect(() => {
     if (profile) fetchDashboardData()
@@ -511,6 +512,7 @@ export default function Dashboard() {
         id,
         week,
         notes,
+        materials_link,
         cover_teacher_id,
         base_schedule:teacher_schedules!teacher_schedule_covers_base_schedule_id_fkey(
           id, day, period, class_name, subject, teacher_id, level,
@@ -537,6 +539,8 @@ export default function Dashboard() {
             cover_status: 'covered',
             cover_teacher_name: cover.cover_teacher?.full_name || 'Assigned teacher',
             cover_notes: cover.notes || null,
+            materials_link: cover.materials_link || null,
+            cover_base_schedule_id: base.id,
           }
           return
         }
@@ -547,6 +551,8 @@ export default function Dashboard() {
             cover_status: 'covering',
             covered_teacher_name: base.users?.full_name || 'Original teacher',
             cover_notes: cover.notes || null,
+            materials_link: cover.materials_link || null,
+            cover_base_schedule_id: base.id,
           }
         }
       })
@@ -741,6 +747,28 @@ export default function Dashboard() {
       .filter(Boolean)
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ')
+  }
+
+  const updateCoverMaterialsLink = async (schedule) => {
+    if (!schedule?.cover_base_schedule_id) return
+    const nextValue = window.prompt('Paste materials folder link (leave blank to clear):', schedule.materials_link || '')
+    if (nextValue === null) return
+
+    setUpdatingCoverMaterials(true)
+    const { error } = await supabase
+      .from('teacher_schedule_covers')
+      .update({ materials_link: nextValue.trim() || null })
+      .eq('base_schedule_id', schedule.cover_base_schedule_id)
+      .eq('week', activeWeekOverride)
+
+    if (error) {
+      setUpdatingCoverMaterials(false)
+      window.alert(`Unable to update materials link: ${error.message}`)
+      return
+    }
+
+    await fetchDashboardData()
+    setUpdatingCoverMaterials(false)
   }
 
   const postTeacherAnnouncement = async (forcedClassIds = null, forcedScope = null, silent = false) => {
@@ -1349,6 +1377,26 @@ export default function Dashboard() {
                                   <div className="text-[10px] text-green-700 truncate">
                                     Covering for {schedule.covered_teacher_name}
                                   </div>
+                                )}
+                                {schedule?.materials_link && (
+                                  <a
+                                    href={schedule.materials_link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-[10px] text-blue-600 hover:underline break-all"
+                                  >
+                                    Open materials
+                                  </a>
+                                )}
+                                {schedule?.cover_status === 'covered' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => updateCoverMaterialsLink(schedule)}
+                                    disabled={updatingCoverMaterials}
+                                    className="mt-1 text-[10px] text-blue-700 hover:underline disabled:opacity-60"
+                                  >
+                                    {updatingCoverMaterials ? 'Updating...' : 'Update materials link'}
+                                  </button>
                                 )}
                               </div>
                             </div>

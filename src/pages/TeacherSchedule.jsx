@@ -46,6 +46,7 @@ export default function TeacherSchedule() {
   const [selectedTeacher, setSelectedTeacher] = useState(null)
   const [teacherLevel, setTeacherLevel] = useState(null)
   const [selectedWeek, setSelectedWeek] = useState(() => getCurrentWeekIndexWithOverride(40))
+  const [updatingCoverMaterials, setUpdatingCoverMaterials] = useState(false)
 
   useEffect(() => {
     fetchTeachers()
@@ -83,6 +84,7 @@ export default function TeacherSchedule() {
       .select(`
         id,
         notes,
+        materials_link,
         cover_teacher_id,
         base_schedule:teacher_schedules!teacher_schedule_covers_base_schedule_id_fkey(
           id, day, period, class_name, subject, teacher_id,
@@ -108,6 +110,8 @@ export default function TeacherSchedule() {
             ...mapped[key],
             cover_status: 'covered',
             cover_teacher_name: cover.cover_teacher?.full_name || 'Assigned teacher',
+            materials_link: cover.materials_link || null,
+            cover_base_schedule_id: base.id,
           }
           return
         }
@@ -117,11 +121,35 @@ export default function TeacherSchedule() {
             ...base,
             cover_status: 'covering',
             covered_teacher_name: base.users?.full_name || 'Original teacher',
+            materials_link: cover.materials_link || null,
+            cover_base_schedule_id: base.id,
           }
         }
       })
       setSchedules(mapped)
     }
+  }
+
+  const updateCoverMaterialsLink = async (schedule) => {
+    if (!schedule?.cover_base_schedule_id) return
+    const nextValue = window.prompt('Paste materials folder link (leave blank to clear):', schedule.materials_link || '')
+    if (nextValue === null) return
+
+    setUpdatingCoverMaterials(true)
+    const { error } = await supabase
+      .from('teacher_schedule_covers')
+      .update({ materials_link: nextValue.trim() || null })
+      .eq('base_schedule_id', schedule.cover_base_schedule_id)
+      .eq('week', selectedWeek)
+
+    if (error) {
+      setUpdatingCoverMaterials(false)
+      window.alert(`Unable to update materials link: ${error.message}`)
+      return
+    }
+
+    await fetchTeacherSchedule()
+    setUpdatingCoverMaterials(false)
   }
 
   // Color by Class name for individual teacher view
@@ -306,6 +334,26 @@ export default function TeacherSchedule() {
                                    <div className="text-[10px] mt-1 text-green-700">
                                      Covering for {schedule.covered_teacher_name}
                                    </div>
+                                 )}
+                                 {schedule.materials_link && (
+                                   <a
+                                     href={schedule.materials_link}
+                                     target="_blank"
+                                     rel="noopener noreferrer"
+                                     className="text-[10px] mt-1 text-blue-700 hover:underline break-all block"
+                                   >
+                                     Open materials
+                                   </a>
+                                 )}
+                                 {(effectiveRole === 'admin' || schedule.cover_status === 'covered') && (
+                                   <button
+                                     type="button"
+                                     onClick={() => updateCoverMaterialsLink(schedule)}
+                                     disabled={updatingCoverMaterials}
+                                     className="text-[10px] mt-1 text-blue-700 hover:underline disabled:opacity-60"
+                                   >
+                                     {updatingCoverMaterials ? 'Updating...' : 'Update materials link'}
+                                   </button>
                                  )}
                                </div>
                              ) : (

@@ -23,6 +23,7 @@ export default function CoverManagement() {
     base_schedule_id: '',
     cover_teacher_id: '',
     notes: '',
+    materials_link: '',
   })
 
   const selectedWeek = useMemo(
@@ -59,6 +60,7 @@ export default function CoverManagement() {
           id,
           week,
           notes,
+          materials_link,
           cover_teacher_id,
           created_at,
           base_schedule_id,
@@ -100,7 +102,7 @@ export default function CoverManagement() {
 
   useEffect(() => {
     setSelectedAbsentTeacher('')
-    setForm({ base_schedule_id: '', cover_teacher_id: '', notes: '' })
+    setForm({ base_schedule_id: '', cover_teacher_id: '', notes: '', materials_link: '' })
   }, [selectedLevel, selectedDate])
 
   const absentTeacherOptions = useMemo(() => {
@@ -157,6 +159,7 @@ export default function CoverManagement() {
       week: selectedWeek,
       cover_teacher_id: form.cover_teacher_id,
       notes: form.notes.trim() || null,
+      materials_link: form.materials_link.trim() || null,
       created_by: profile.id,
     }
 
@@ -171,7 +174,7 @@ export default function CoverManagement() {
     }
 
     setStatusMessage({ type: 'success', text: 'Cover assignment saved.' })
-    setForm({ base_schedule_id: '', cover_teacher_id: '', notes: '' })
+    setForm({ base_schedule_id: '', cover_teacher_id: '', notes: '', materials_link: '' })
     setSaving(false)
     await fetchData()
     window.setTimeout(() => setStatusMessage(null), 3000)
@@ -183,6 +186,7 @@ export default function CoverManagement() {
       base_schedule_id: cover.base_schedule_id,
       cover_teacher_id: cover.cover_teacher_id || '',
       notes: cover.notes || '',
+      materials_link: cover.materials_link || '',
     })
   }
 
@@ -287,7 +291,7 @@ export default function CoverManagement() {
               value={selectedAbsentTeacher}
               onChange={(e) => {
                 setSelectedAbsentTeacher(e.target.value)
-                setForm({ base_schedule_id: '', cover_teacher_id: '', notes: '' })
+                setForm({ base_schedule_id: '', cover_teacher_id: '', notes: '', materials_link: '' })
               }}
               disabled={selectedDay === null}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:bg-gray-100 disabled:text-gray-400"
@@ -350,6 +354,17 @@ export default function CoverManagement() {
             />
           </div>
 
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Materials folder link (optional)</label>
+            <input
+              type="url"
+              value={form.materials_link}
+              onChange={(e) => setForm((prev) => ({ ...prev, materials_link: e.target.value }))}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              placeholder="https://drive.google.com/..."
+            />
+          </div>
+
           {selectedBaseSchedule && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
               Original teacher keeps this lesson visible and it will be marked as covered for this date's week only.
@@ -385,6 +400,16 @@ export default function CoverManagement() {
                 </div>
                 {cover.notes && (
                   <div className="text-xs text-gray-500 mt-1">Notes: {cover.notes}</div>
+                )}
+                {cover.materials_link && (
+                  <a
+                    href={cover.materials_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block text-xs text-blue-600 hover:underline mt-1 break-all"
+                  >
+                    Open materials folder
+                  </a>
                 )}
                 <div className="flex gap-2 mt-3">
                   <button
