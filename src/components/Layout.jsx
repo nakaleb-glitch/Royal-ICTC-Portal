@@ -339,7 +339,7 @@ export default function Layout({ children }) {
                   </span>
                 </div>
               </div>
-              {sessionStorage.getItem('debug_week_override') !== null && (
+              {sessionStorage.getItem('debug_date_override') !== null && (
                 <span className="text-xs font-semibold italic text-amber-400">
                   Admin date override in progress.
                 </span>

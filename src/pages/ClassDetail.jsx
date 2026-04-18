@@ -6,6 +6,7 @@ import AnnouncementPdfButton from '../components/AnnouncementPdfButton'
 import Layout from '../components/Layout'
 import ProfileAvatar from '../components/ProfileAvatar'
 import { useAuth } from '../contexts/AuthContext'
+import { getCurrentWeekIndexWithOverride } from '../lib/academicCalendar'
 
 const TERMS = [
   { key: 'midterm_1', label: 'Midterm 1', weeks: 8 },
@@ -106,23 +107,7 @@ export default function ClassDetail() {
   // Listen for changes to current week from navigation bar
   useEffect(() => {
     const updateWeek = () => {
-      // Admin debug override takes highest priority
-      let w
-
-      const debugVal = window.localStorage.getItem('debug_current_week')
-      if (debugVal != null && debugVal !== '') {
-        w = parseInt(debugVal, 10)
-      } else {
-        const navVal = window.sessionStorage.getItem('current_week_number')
-        w = navVal != null ? parseInt(navVal, 10) : 0
-      }
-
-      // Fallback to 0 for invalid numbers
-      if (Number.isNaN(w) || w < 0 || w > 40) {
-        w = 0
-      }
-
-      setActiveWeek(w)
+      setActiveWeek(getCurrentWeekIndexWithOverride(40))
     }
 
     updateWeek()
@@ -132,31 +117,7 @@ export default function ClassDetail() {
 
   // Always read directly from storage for latest value - no local caching
   const detectCurrentTerm = () => {
-    // Always get fresh value when this function runs - using EXACT SAME KEY as navigation bar!
-    let week
-
-    // ✅ EXACT SAME LOGIC AS IN LAYOUT.JSX - this fixes the ReferenceError
-    const debugVal = window.sessionStorage.getItem('debug_week_override')
-    if (debugVal !== null) {
-      week = Number(debugVal)
-      if (week >= 0 && week < 40) {
-        // valid range
-      } else {
-        week = 0
-      }
-    } else {
-      const today = new Date()
-      if (today < new Date('2026-08-17')) {
-        week = 0
-      } else {
-        // Default fallback
-        week = 0
-      }
-    }
-
-    if (Number.isNaN(week) || week < 0 || week > 40) {
-      week = 0
-    }
+    const week = getCurrentWeekIndexWithOverride(40)
 
     if (week >= 0 && week <= 7) return 'midterm_1'
     if (week >= 8 && week <= 15) return 'final_1'

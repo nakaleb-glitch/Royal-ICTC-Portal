@@ -134,6 +134,13 @@ const parseLocalDateInput = (value) => {
   return new Date(year, month - 1, day)
 }
 
+const syncLegacyDebugWeekOverride = (dateValue) => {
+  const parsed = parseLocalDateInput(dateValue)
+  if (!parsed) return
+  const week = getWeekIndexForDate(parsed)
+  sessionStorage.setItem('debug_week_override', String(week))
+}
+
 export default function Dashboard() {
   const { profile, user, effectiveRole } = useAuth()
   const [classes, setClasses] = useState([])
@@ -197,6 +204,11 @@ export default function Dashboard() {
   const [teacherSchedule, setTeacherSchedule] = useState({})
   const [teacherLevel, setTeacherLevel] = useState('primary')
   const [updatingCoverMaterials, setUpdatingCoverMaterials] = useState(false)
+
+  useEffect(() => {
+    if (!sessionStorage.getItem('debug_date_override')) return
+    syncLegacyDebugWeekOverride(debugDateOverride)
+  }, [debugDateOverride])
 
   useEffect(() => {
     if (profile) fetchDashboardData()
@@ -1178,6 +1190,7 @@ export default function Dashboard() {
                               const nextValue = e.target.value
                               setDebugDateOverride(nextValue)
                               sessionStorage.setItem('debug_date_override', nextValue)
+                              syncLegacyDebugWeekOverride(nextValue)
                             }}
                             className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
@@ -1185,6 +1198,7 @@ export default function Dashboard() {
                             onClick={() => {
                               // Clear all storage overrides
                               sessionStorage.removeItem('debug_date_override')
+                              sessionStorage.removeItem('debug_week_override')
 
                               // Reset dashboard date context to local today
                               setDebugDateOverride(formatLocalDateInput(new Date()))
