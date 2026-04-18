@@ -351,24 +351,37 @@ export default function TeacherSchedule() {
                                      Covering for {schedule.covered_teacher_name}
                                    </div>
                                  )}
-                                 {schedule.materials_link && (
+                                 {schedule.materials_link && schedule.cover_status === 'covering' && (
                                    <a
                                      href={schedule.materials_link}
                                      target="_blank"
                                      rel="noopener noreferrer"
-                                     className="text-[10px] mt-1 text-blue-700 hover:underline break-all block"
+                                     className="text-[10px] mt-1 text-blue-600 hover:underline break-all block"
                                    >
-                                     Open materials
+                                     View Materials
                                    </a>
                                  )}
-                                 {(effectiveRole === 'admin' || schedule.cover_status === 'covered') && (
+                                 {schedule.materials_link && schedule.cover_status === 'covered' && (
+                                   <a
+                                     href={schedule.materials_link}
+                                     target="_blank"
+                                     rel="noopener noreferrer"
+                                     className="text-[10px] mt-1 text-blue-600 hover:underline break-all block"
+                                   >
+                                     View
+                                   </a>
+                                 )}
+                                 {schedule.cover_base_schedule_id && (
+                                   schedule.cover_status === 'covered'
+                                   || (effectiveRole === 'admin' && schedule.cover_status === 'covering')
+                                 ) && (
                                    <button
                                      type="button"
                                      onClick={() => updateCoverMaterialsLink(schedule)}
                                      disabled={updatingCoverMaterials}
                                      className="text-[10px] mt-1 text-blue-700 hover:underline disabled:opacity-60"
                                    >
-                                     {updatingCoverMaterials ? 'Updating...' : 'Update materials link'}
+                                     {updatingCoverMaterials ? 'Updating...' : 'Update'}
                                    </button>
                                  )}
                                </div>
