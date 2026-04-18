@@ -639,7 +639,7 @@ export default function PeriodAllocation() {
                     rows.map((row, idx) => (
                       <tr
                         key={row.id}
-                        className="odd:bg-white even:bg-gray-50 border-t border-gray-200"
+                        className="odd:bg-white even:bg-gray-50 dark:odd:bg-gray-900 dark:even:bg-gray-800 border-t border-gray-200"
                       >
                         <th className="sticky left-0 z-10 px-2 py-1 text-left font-medium text-gray-900 border-t border-r border-gray-200 bg-inherit">
                           {idx + 1}
@@ -836,7 +836,7 @@ export default function PeriodAllocation() {
               {CONTRACT_HOURS_WEEK} h − teaching − prep.
             </p>
 
-            <div className="rounded-xl border border-gray-200 bg-gray-50 dark:bg-gray-900 p-3 mb-4">
+            <div className="rounded-xl border border-gray-200 bg-white dark:bg-gray-900 p-3 mb-4 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <h3 className="text-sm font-semibold text-gray-900">
                   Recruitment Needs
@@ -928,7 +928,7 @@ export default function PeriodAllocation() {
                     combinedSummaries.map((s, i) => (
                       <tr
                         key={s.teacherKey}
-                        className="border-t border-gray-200 odd:bg-white even:bg-gray-50"
+                        className="border-t border-gray-200 odd:bg-white even:bg-gray-50 dark:odd:bg-gray-900 dark:even:bg-gray-800"
                       >
                         <td className="px-2 py-2 tabular-nums text-gray-900">{i + 1}</td>
                         <td className="px-2 py-2 text-gray-900">{s.displayName}</td>
